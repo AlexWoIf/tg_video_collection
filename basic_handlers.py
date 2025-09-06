@@ -1,4 +1,17 @@
-async def handle_history_command(update, context):
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+
+from helpers import (
+    get_button_for_serial,
+)
+from queries import (
+    get_aggregated_view_history,
+)
+
+
+async def handle_help_command(update, context):
     reply_text='''
         Бот для просмотра сериалов прямо в телеграме
         Список доступных команд:
@@ -14,7 +27,31 @@ async def handle_history_command(update, context):
 
 async def handle_start_command(update, context):
     if not context.args:
-        await handle_history_command(update, context)
+        await handle_help_command(update, context)
         return
     reply_text = f'"{'", "'.join(context.args)}"'
     await update.message.reply_text(reply_text)
+
+
+async def handle_history_command(update, context):
+    user_id=update.message.from_user.id
+    db = context.application.database.get_session()
+    history = get_aggregated_view_history(db, user_id)
+    if not history:
+        reply_text = 'История просмотров пуста'
+        await update.message.reply_text(reply_text)
+        return
+    keyboard = [
+        [InlineKeyboardButton(**get_button_for_serial(serial))] for serial in history # noqa E501
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_text=(
+        'Вот последние просмотренные Вами сериалы.\n'
+        'Сверху - самый последний просмотренный и далее по хронологии.\n'
+        'В скобках указано количество эпизодов.'
+    )
+
+    await update.message.reply_text(
+        text=reply_text,
+        reply_markup = reply_markup,
+    )

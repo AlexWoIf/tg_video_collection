@@ -17,6 +17,7 @@ from telegram.ext import (
 
 from basic_handlers import (
     handle_history_command,
+    handle_help_command,
     handle_start_command,
 )
 from db import Database
@@ -72,12 +73,13 @@ def main():
                     .build()
 
     application.database = Database(app_config.db_url, )
-    application.storage_chat_id = app_config.storage_chat_id
+    application.config_vars = app_config.parameters
 
     conversation_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", handle_start_command),
-            CommandHandler('help', handle_history_command),
+            CommandHandler('help', handle_help_command),
+            CommandHandler('history', handle_history_command),
         ],
         states={
             BASIC_MODE: [],

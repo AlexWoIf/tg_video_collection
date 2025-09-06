@@ -19,7 +19,10 @@ class Config():
         tg_base_url = os.getenv('TG_BASE_URL', 'https://api.telegram.org/bot')
         self.tg_api_url = f'{tg_base_url}{tg_bot_token}'
 
-        self.storage_chat_id = os.getenv('STORAGE_CHAT_ID', '')
+        self.parameters = {
+            'storage_chat_id': os.getenv('STORAGE_CHAT_ID', ''),
+            'page_length': int(os.getenv('PAGE_LENGTH', '10')),
+        }
 
         # TODO: use pydantic instead
         if not db_name or not db_user or not db_password or not tg_bot_token:

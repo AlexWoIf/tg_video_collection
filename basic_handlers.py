@@ -46,7 +46,7 @@ async def handle_history_command(update, context):
         total_pages = 1
     else:
         total_pages = get_aggregated_view_history(db, user_id, 0, ) // page_length + 1 # noqa E501
-    reply_markup = get_paginated_markup(history, 1, total_pages)
+    reply_markup = get_paginated_markup(history, 1, 1) # total_pages)
     reply_text=(
         'Вот последние просмотренные Вами сериалы.\n'
         'Сверху - самый последний из просмотренных и далее по хронологии.\n'

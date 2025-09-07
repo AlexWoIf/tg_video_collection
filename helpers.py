@@ -36,7 +36,7 @@ def get_button_text_for_serial(serial, max_length=40):
             'callback_data': f'details:{serial_id}'}
 
 
-def get_paginated_markup(serials, current_page, total_pages):
+def get_paginated_markup(serials, current_page, total_pages, list_type='history'): # noqa E501
     keyboard = [
         [InlineKeyboardButton(**get_button_text_for_serial(serial))]
         for serial in serials
@@ -46,18 +46,18 @@ def get_paginated_markup(serials, current_page, total_pages):
     keyboard.append([
         InlineKeyboardButton(
             text='1⏮️',
-            callback_data=f'page:1' if current_page>1 else '-'),
+            callback_data=f'{list_type}:1' if current_page>1 else '-'),
         InlineKeyboardButton(
             text='◀️',
-            callback_data=f'page:{current_page - 1}' if current_page>1 else '-'), # noqa E501
+            callback_data=f'{list_type}:{current_page - 1}' if current_page>1 else '-'), # noqa E501
         InlineKeyboardButton(f'{current_page}', callback_data='-'),
         InlineKeyboardButton(
             text='▶️', 
-            callback_data=f'page:{current_page+1}' if current_page<total_pages
+            callback_data=f'{list_type}:{current_page+1}' if current_page<total_pages
                             else '-'),
         InlineKeyboardButton(
             text=f'⏭️{total_pages}',
-            callback_data=f'page:{total_pages}' if current_page<total_pages
+            callback_data=f'{list_type}:{total_pages}' if current_page<total_pages
                             else '-'),
     ])
     return InlineKeyboardMarkup(keyboard)

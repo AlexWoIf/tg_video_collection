@@ -73,7 +73,7 @@ def main():
                     .build()
 
     application.database = Database(app_config.db_url, )
-    application.config_vars = app_config.parameters
+    application.parameters = app_config.parameters
 
     conversation_handler = ConversationHandler(
         entry_points=[

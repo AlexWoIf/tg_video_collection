@@ -21,7 +21,7 @@ class Config():
 
         self.parameters = {
             'storage_chat_id': os.getenv('STORAGE_CHAT_ID', ''),
-            'page_length': int(os.getenv('PAGE_LENGTH', '10')),
+            'page_length': int(os.getenv('MAX_PAGE_LENGTH', '10')),
         }
 
         # TODO: use pydantic instead

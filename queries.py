@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, case, text
-from sqlalchemy.sql.expression import over
+from sqlalchemy import desc, func, case, distinct
 
 from models import *
 
 def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offset: int = 0):
     """
-    Получает агрегированную историю просмотров по сериалам с группировкой по последовательным просмотрам
-    с поддержкой пагинации
+    Получает агрегированную историю просмотров по сериалам с группировкой по 
+    последовательным просмотрам с поддержкой пагинации.
+    Если limit=0, то возвращает общее количество групп просмотров.
     """
     # Сначала создаем подзапрос, который вычисляет флаг изменения сериала
     subquery = db.query(
@@ -53,7 +53,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     ).subquery()
 
     # Финальный запрос для агрегации по группам
-    return db.query(
+    query = db.query(
         cte_query.c.name_rus,
         cte_query.c.name_eng,
         func.count().label('consecutive_views'),
@@ -64,4 +64,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
         cte_query.c.group_number
     ).order_by(
         func.max(cte_query.c.updated_at).desc()
-    ).limit(limit).offset(offset).all()
+    )
+    if limit:
+        return query.limit(limit).offset(offset).all()
+    return query.count()

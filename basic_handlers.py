@@ -4,7 +4,7 @@ from telegram import (
 )
 
 from helpers import (
-    get_button_for_serial,
+    get_paginated_markup,
 )
 from queries import (
     get_aggregated_view_history,
@@ -36,15 +36,17 @@ async def handle_start_command(update, context):
 async def handle_history_command(update, context):
     user_id=update.message.from_user.id
     db = context.application.database.get_session()
-    history = get_aggregated_view_history(db, user_id)
+    page_length = context.application.parameters.get('page_length')
+    history = get_aggregated_view_history(db, user_id, page_length, )
     if not history:
         reply_text = 'История просмотров пуста'
         await update.message.reply_text(reply_text)
         return
-    keyboard = [
-        [InlineKeyboardButton(**get_button_for_serial(serial))] for serial in history # noqa E501
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    if len(history) < page_length:
+        total_pages = 1
+    else:
+        total_pages = get_aggregated_view_history(db, user_id, 0, ) // page_length + 1 # noqa E501
+    reply_markup = get_paginated_markup(history, 1, total_pages)
     reply_text=(
         'Вот последние просмотренные Вами сериалы.\n'
         'Сверху - самый последний из просмотренных и далее по хронологии.\n'

@@ -17,7 +17,7 @@ class User(Base):
     language_code = Column(Text, nullable=False, default='')
     is_bot = Column(Boolean, nullable=False, default=False)
 
-    view_requests = relationship("EpisodeViewRecord", back_populates="user")
+    view_requests = relationship('EpisodeViewRecord', back_populates='user')
 
     def __repr__(self):
         return f'<User(id={self.id}, username="{self.username}")>'
@@ -37,7 +37,7 @@ class Serial(Base):
     IMDB = Column(String(10), nullable=False, default='')
     kp_id = Column(String(10), nullable=False, default='')
 
-    episodes = relationship("Episode", back_populates="serial")
+    episodes = relationship('Episode', back_populates='serial')
 
     def __repr__(self):
         return f'<Serial(id={self.id}, name_rus="{self.name_rus}")>'
@@ -49,7 +49,7 @@ class Audio(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     name = Column(Text, nullable=False, default='')
 
-    files = relationship("File", back_populates="audio")
+    files = relationship('File', back_populates='audio')
 
     def __repr__(self):
         return f'<Audio(id={self.id}, name="{self.name}")>'
@@ -69,9 +69,9 @@ class Episode(Base):
     name = Column(Text, nullable=False, default='')
     file_id = Column(Text, nullable=True, default='')
 
-    serial = relationship("Serial", back_populates="episodes")
-    files = relationship("File", back_populates="episode")
-    view_requests = relationship("EpisodeViewRecord", back_populates="episode")
+    serial = relationship('Serial', back_populates='episodes')
+    files = relationship('File', back_populates='episode')
+    view_requests = relationship('EpisodeViewRecord', back_populates='episode')
 
     def __repr__(self):
         return f'<Episode(id={self.id}, serial_id={self.serial_id})>'
@@ -89,8 +89,8 @@ class File(Base):
     audio_id = Column(Integer, ForeignKey('sounds.id'), nullable=False, 
                       default=0)
 
-    episode = relationship("Episode", back_populates="files")
-    audio = relationship("Audio", back_populates="files")
+    episode = relationship('Episode', back_populates='files')
+    audio = relationship('Audio', back_populates='files')
 
     def __repr__(self):
         return f'<File(episode_id={self.episode_id}, file_id="{self.file_id}")>'  # noqa: E501
@@ -106,8 +106,8 @@ class EpisodeViewRecord (Base):
     episode_id = Column(BigInteger, ForeignKey('episodes.id'), nullable=True)
     updated_at = Column(String(26), nullable=False)
 
-    user = relationship("User", back_populates="view_requests")
-    episode = relationship("Episode", back_populates="view_requests")
+    user = relationship('User', back_populates='view_requests')
+    episode = relationship('Episode', back_populates='view_requests')
 
     def __repr__(self):
         return f'<EpisodeViewRecord(user_id={self.user_id}, episode_id={self.episode_id})>'  # noqa: E501

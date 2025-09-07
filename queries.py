@@ -68,3 +68,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     if limit:
         return query.limit(limit).offset(offset).all()
     return query.count()
+
+
+def get_serial_by_id(db: Session, serial_id: int):
+    return db.query(Serial).filter(Serial.id == serial_id).one()

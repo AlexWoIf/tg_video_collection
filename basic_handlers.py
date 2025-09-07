@@ -6,9 +6,11 @@ from telegram import (
 
 from helpers import (
     get_paginated_markup,
+    get_serial_detail_markup
 )
 from queries import (
     get_aggregated_view_history,
+    get_serial_by_id,
 )
 
 
@@ -35,7 +37,6 @@ async def handle_start_command(update, context):
 
 
 async def handle_history_command(update, context):
-    logging.debug(f'{update.effective_sender=}')
     user_id = update.effective_sender.id
     page = int(context.args[0]) if context.args else 1
     page_length = context.application.parameters.get('page_length')
@@ -53,18 +54,16 @@ async def handle_history_command(update, context):
             total_pages = 1
         else:
             total_pages = get_aggregated_view_history(db, user_id, 0, ) // page_length + 1 # noqa E501
-    reply_markup = get_paginated_markup(history, page, total_pages)
     reply_text=(
         'Вот последние просмотренные Вами сериалы.\n'
         'Сверху - самый последний из просмотренных и далее по хронологии.\n'
         'В квадратных скобках указано количество просмотров эпизодов.'
         f'Страница{page} из {total_pages}'
     )
-
     await context.bot.send_message(
         chat_id=update.effective_chat.id, 
         text=reply_text,
-        reply_markup = reply_markup,
+        reply_markup = get_paginated_markup(history, page, total_pages),
     )
 
 
@@ -73,12 +72,37 @@ async def handle_history_callback(update, context):
     _, page = callback_query.data.split(':')
     context.args = [page,]
     await handle_history_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_details_callback(update, context):
+    callback_query = update.callback_query
+    _, serial_id = callback_query.data.split(':')
+    with context.application.database.session() as db:
+        try:
+            serial = get_serial_by_id(db, serial_id)
+        except(NoResultFound, MultipleResultsFound) as e:
+            await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
+            return
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            parse_mode='HTML',
+            text = f'<b>{serial.name_rus}({serial.name_eng})</b>\n'
+                f'<u>Формат серий:</u><i> {serial.format}</i>\n' 
+                f'<u>Описание:</u>\n{serial.descr}',
+            reply_markup = get_serial_detail_markup(serial),
+        )
+    await handle_delete_callback(update, context)
+
+
+async def handle_delete_callback(update, context):
     try:
-        await callback_query.delete_message()
-        await callback_query.answer()
+        await update.callback_query.delete_message()
+        await update.callback_query.answer()
     except tg_error.BadRequest:
-        logging.error("Delete: BadRequest")
-        await callback_query.answer("Старые сообщения не могут быть удалены")
+        logging.error('Delete: BadRequest')
+        await update.callback_query.answer('Старые сообщения не могут быть удалены')
+    await update.callback_query.answer()
 
 
 async def handle_unknown_callback(update, context):

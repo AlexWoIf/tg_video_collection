@@ -4,6 +4,15 @@ from telegram import (
 )
 
 
+DELETE = '\u274c Удалить'
+#LISTEPISODES = '🎞️ Вернуться к списку эпизодов'
+LISTEPISODES = '👈 Вернуться к списку эпизодов'
+#LISTSEASONS = '🎬 Список сезонов'
+LISTSEASONS = '🗂️ Список сезонов'
+SERIALDETAILS = '\u2139 Информация о сериале'
+COMPLAIN = '⚠ Сообщить о проблеме'
+
+
 def format_numeric(number, keyword):
     words = {
          'просмотр': ['просмотр', 'просмотра', 'просмотров'],
@@ -60,4 +69,16 @@ def get_paginated_markup(serials, current_page, total_pages, list_type='history'
             callback_data=f'{list_type}:{total_pages}' if current_page<total_pages
                             else '-'),
     ])
+    return InlineKeyboardMarkup(keyboard)
+
+def get_serial_detail_markup(serial):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                text=LISTSEASONS,
+                callback_data=f'seasons:{serial.id}'),
+            InlineKeyboardButton(
+                text=DELETE,
+                callback_data='delete:')]
+    ]
     return InlineKeyboardMarkup(keyboard)

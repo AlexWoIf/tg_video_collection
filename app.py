@@ -17,6 +17,8 @@ from telegram.ext import (
 )
 
 from basic_handlers import (
+    handle_delete_callback,
+    handle_details_callback,
     handle_history_callback,
     handle_history_command,
     handle_help_command,
@@ -28,7 +30,7 @@ from config import Config
 
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
@@ -69,7 +71,7 @@ def main():
     """Run the bot."""
     app_config = Config()
 
-    persistence = PicklePersistence(filepath="persistence.pickle")
+    persistence = PicklePersistence(filepath='persistence.pickle')
     application = Application.builder() \
                     .token(app_config.tg_bot_token) \
                     .persistence(persistence) \
@@ -80,9 +82,11 @@ def main():
 
     conversation_handler = ConversationHandler(
         entry_points=[
-            CommandHandler("start", handle_start_command),
+            CommandHandler('start', handle_start_command),
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
+            CallbackQueryHandler(handle_delete_callback, r'delete:'),
+            CallbackQueryHandler(handle_details_callback, r'details:'),
             CallbackQueryHandler(handle_history_callback, r'history:'),
             CallbackQueryHandler(handle_unknown_callback),
         ],
@@ -90,7 +94,7 @@ def main():
             BASIC_MODE: [],
         },
         fallbacks=[],
-        name="main_conversation",
+        name='main_conversation',
         persistent=True,
     )
 
@@ -100,5 +104,5 @@ def main():
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

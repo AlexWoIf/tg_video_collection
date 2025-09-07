@@ -7,6 +7,7 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
@@ -16,9 +17,11 @@ from telegram.ext import (
 )
 
 from basic_handlers import (
+    handle_history_callback,
     handle_history_command,
     handle_help_command,
     handle_start_command,
+    handle_unknown_callback,
 )
 from db import Database
 from config import Config
@@ -80,6 +83,8 @@ def main():
             CommandHandler("start", handle_start_command),
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
+            CallbackQueryHandler(handle_history_callback, r'history:'),
+            CallbackQueryHandler(handle_unknown_callback),
         ],
         states={
             BASIC_MODE: [],

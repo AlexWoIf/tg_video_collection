@@ -72,3 +72,16 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
 
 def get_serial_by_id(db: Session, serial_id: int):
     return db.query(Serial).filter(Serial.id == serial_id).one()
+
+
+def get_seasons_by_serial_id(db: Session, serial_id: int):
+        return db.query(
+        Episode.season,
+        func.count(Episode.id).label('episode_count')
+    ).filter(
+        Episode.serial_id == serial_id
+    ).group_by(
+        Episode.season
+    ).order_by(
+        Episode.season
+    ).all()

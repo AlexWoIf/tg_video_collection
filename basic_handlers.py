@@ -1,17 +1,23 @@
 import logging
 
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from telegram import (
     error as tg_error,
 )
 
 from helpers import (
     get_paginated_markup,
-    get_serial_detail_markup
+    get_seasons_markup,
+    get_serial_detail_markup,
 )
 from queries import (
     get_aggregated_view_history,
+    get_seasons_by_serial_id,
     get_serial_by_id,
 )
+
+
+POSTERS_URL = "https://alexwolf.ru/ksb/covers/{}.jpg"
 
 
 async def handle_help_command(update, context):
@@ -81,9 +87,9 @@ async def handle_details_callback(update, context):
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
-        except(NoResultFound, MultipleResultsFound) as e:
+        except (NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
-            return
+            raise
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             parse_mode='HTML',
@@ -95,13 +101,36 @@ async def handle_details_callback(update, context):
     await handle_delete_callback(update, context)
 
 
+async def handle_seasons_callback(update, context):
+    callback_query = update.callback_query
+    _, serial_id = callback_query.data.split(':')
+    with context.application.database.session() as db:
+        try:
+            serial = get_serial_by_id(db, serial_id)
+            seasons = get_seasons_by_serial_id(db, serial_id)
+        except(NoResultFound, MultipleResultsFound) as e:
+            await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
+            raise
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=POSTERS_URL.format(serial_id),
+            parse_mode='HTML',
+            caption = f'<b>{serial.name_rus}({serial.name_eng})</b>\n'
+                        'Выберите сезон из списка ниже.'
+                        'В квадратных скобках количество серий',
+            reply_markup = get_seasons_markup(serial.id, seasons)
+        )
+    await handle_delete_callback(update, context)
+
+
 async def handle_delete_callback(update, context):
     try:
         await update.callback_query.delete_message()
         await update.callback_query.answer()
     except tg_error.BadRequest:
         logging.error('Delete: BadRequest')
-        await update.callback_query.answer('Старые сообщения не могут быть удалены')
+        await update.callback_query.answer('Старые сообщения не могут быть удалены') # noqa E501
+        return
     await update.callback_query.answer()
 
 

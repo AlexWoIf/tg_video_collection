@@ -22,6 +22,7 @@ from basic_handlers import (
     handle_history_callback,
     handle_history_command,
     handle_help_command,
+    handle_seasons_callback,
     handle_start_command,
     handle_unknown_callback,
 )
@@ -87,6 +88,7 @@ def main():
             CommandHandler('history', handle_history_command),
             CallbackQueryHandler(handle_delete_callback, r'delete:'),
             CallbackQueryHandler(handle_details_callback, r'details:'),
+            CallbackQueryHandler(handle_seasons_callback, r'seasons:'),
             CallbackQueryHandler(handle_history_callback, r'history:'),
             CallbackQueryHandler(handle_unknown_callback),
         ],

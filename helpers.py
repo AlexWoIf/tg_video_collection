@@ -11,6 +11,8 @@ LISTEPISODES = '👈 Вернуться к списку эпизодов'
 LISTSEASONS = '🗂️ Список сезонов'
 SERIALDETAILS = '\u2139 Информация о сериале'
 COMPLAIN = '⚠ Сообщить о проблеме'
+SUPPORT_LINK = 'tg://resolve?domain=AlexWolf_kornet'
+
 
 
 def format_numeric(number, keyword):
@@ -81,4 +83,24 @@ def get_serial_detail_markup(serial):
                 text=DELETE,
                 callback_data='delete:')]
     ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_seasons_markup(serial_id, seasons):
+    keyboard = []
+    for i in range(0, len(seasons), 2):
+        keyboard.append(
+            [InlineKeyboardButton(
+                text=f'Сезон {season}[{episodes}]',
+                callback_data=f'seasons:{serial_id}:{season}')
+            for season, episodes in seasons[i:i+2]]
+        )
+    keyboard.append([
+        InlineKeyboardButton(
+            text=SERIALDETAILS,
+            callback_data=f'details:{serial_id}')
+    ])
+    keyboard.append([
+        InlineKeyboardButton(COMPLAIN, url=SUPPORT_LINK),
+        InlineKeyboardButton(DELETE, callback_data='delete:')])
     return InlineKeyboardMarkup(keyboard)

@@ -65,9 +65,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     ).order_by(
         func.max(cte_query.c.updated_at).desc()
     )
-    if limit:
-        return query.limit(limit).offset(offset).all()
-    return query.count()
+    return query.limit(limit).offset(offset).all(), query.count()
 
 
 def get_serial_by_id(db: Session, serial_id: int):
@@ -85,3 +83,28 @@ def get_seasons_by_serial_id(db: Session, serial_id: int):
     ).order_by(
         Episode.season
     ).all()
+
+
+def get_episodes_by_serial_id(
+          db: Session,
+          serial_id: int,
+          season: int,
+          user_id: int,
+          limit: int = 10,
+          offset: int = 0, ):
+    query = db.query(
+        func.count(EpisodeViewRecord.updated_at),
+        Episode.season,
+        Episode.episode,
+        Episode.name,
+        Episode.id,
+    ).join(
+        EpisodeViewRecord, EpisodeViewRecord.episode_id==Episode.id, isouter=True, # noqa: E501
+    ).filter(
+        Episode.serial_id==serial_id, Episode.season==season, EpisodeViewRecord.user_id==user_id, # noqa: E501
+    ).group_by(
+        Episode.id, Episode.episode
+    ).order_by(
+        Episode.episode
+    )
+    return query.limit(limit).offset(offset).all(), query.count()

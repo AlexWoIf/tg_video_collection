@@ -19,6 +19,7 @@ from telegram.ext import (
 from basic_handlers import (
     handle_delete_callback,
     handle_details_callback,
+    handle_episodes_callback,
     handle_history_callback,
     handle_history_command,
     handle_help_command,
@@ -88,6 +89,7 @@ def main():
             CommandHandler('history', handle_history_command),
             CallbackQueryHandler(handle_delete_callback, r'delete:'),
             CallbackQueryHandler(handle_details_callback, r'details:'),
+            CallbackQueryHandler(handle_episodes_callback, r'episodes:'),
             CallbackQueryHandler(handle_seasons_callback, r'seasons:'),
             CallbackQueryHandler(handle_history_callback, r'history:'),
             CallbackQueryHandler(handle_unknown_callback),

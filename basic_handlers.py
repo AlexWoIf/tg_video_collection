@@ -6,12 +6,16 @@ from telegram import (
 )
 
 from helpers import (
+    add_episodes_markup_footer,
+    get_button_text_for_episode,
+    get_button_text_for_serial,
     get_paginated_markup,
     get_seasons_markup,
     get_serial_detail_markup,
 )
 from queries import (
     get_aggregated_view_history,
+    get_episodes_by_serial_id,
     get_seasons_by_serial_id,
     get_serial_by_id,
 )
@@ -48,7 +52,8 @@ async def handle_history_command(update, context):
     page_length = context.application.parameters.get('page_length')
     offset = (page - 1) * page_length
     with context.application.database.session() as db:
-        history = get_aggregated_view_history(db, user_id, page_length, offset)
+        history, total_lines = get_aggregated_view_history(
+            db, user_id, page_length, offset)
         if not history:
             reply_text = 'История просмотров пуста'
             await context.bot.send_message(
@@ -56,20 +61,20 @@ async def handle_history_command(update, context):
                 text=reply_text
             )
             return
-        if len(history) < page_length and page == 1:
-            total_pages = 1
-        else:
-            total_pages = get_aggregated_view_history(db, user_id, 0, ) // page_length + 1 # noqa E501
+        total_pages = total_lines // page_length
+        total_pages += 1 if total_lines % page_length else 0
+    buttons_callbacks = [get_button_text_for_serial(serial) for serial in history] # noqa E501
     reply_text=(
         'Вот последние просмотренные Вами сериалы.\n'
         'Сверху - самый последний из просмотренных и далее по хронологии.\n'
         'В квадратных скобках указано количество просмотров эпизодов.'
-        f'Страница{page} из {total_pages}'
+        f'Страница {page} из {total_pages}'
     )
     await context.bot.send_message(
         chat_id=update.effective_chat.id, 
         text=reply_text,
-        reply_markup = get_paginated_markup(history, page, total_pages),
+        reply_markup = get_paginated_markup(
+            buttons_callbacks, 'history', page, total_pages),
     )
 
 
@@ -118,7 +123,48 @@ async def handle_seasons_callback(update, context):
             caption = f'<b>{serial.name_rus}({serial.name_eng})</b>\n'
                         'Выберите сезон из списка ниже.'
                         'В квадратных скобках количество серий',
-            reply_markup = get_seasons_markup(serial.id, seasons)
+            reply_markup = get_seasons_markup(serial_id, seasons)
+        )
+    await handle_delete_callback(update, context)
+
+
+async def handle_episodes_callback(update, context):
+    callback_query = update.callback_query
+    _, serial_id, season, page = callback_query.data.split(':')
+    current_page = int(page)
+    page_length = context.application.parameters.get('page_length')
+    user_id = update.effective_sender.id
+    with context.application.database.session() as db:
+        try:
+            serial = get_serial_by_id(db, serial_id)
+            episodes, total_lines = get_episodes_by_serial_id(
+                db,
+                serial_id,
+                season,
+                user_id,
+                page_length,
+                (current_page - 1) * page_length)
+        except(NoResultFound, MultipleResultsFound) as e:
+            await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
+            raise
+        buttons_callbacks = [get_button_text_for_episode(episode) for episode in episodes] # noqa E501
+        total_pages = total_lines // page_length
+        total_pages += 1 if total_lines % page_length else 0
+        reply_markup = get_paginated_markup(
+                buttons_callbacks, 
+                f'episodes:{serial_id}:{season}', 
+                current_page, 
+                total_pages)
+        reply_markup = add_episodes_markup_footer(reply_markup, serial_id)
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo = POSTERS_URL.format(serial_id),
+            parse_mode='HTML',
+            caption=f'<b>{serial.name_rus}({serial.name_eng})</b>\n'
+                    f'Выберите нужный эпизод из сезона {season}:\n'
+                    '✅ - вы уже запрашивали этот эпизод\n' \
+                    f'Страница {current_page} из {total_pages}',
+            reply_markup=reply_markup,
         )
     await handle_delete_callback(update, context)
 

@@ -23,6 +23,7 @@ from basic_handlers import (
     handle_history_callback,
     handle_history_command,
     handle_help_command,
+    handle_play_callback,
     handle_seasons_callback,
     handle_start_command,
     handle_unknown_callback,
@@ -76,6 +77,7 @@ def main():
     persistence = PicklePersistence(filepath='persistence.pickle')
     application = Application.builder() \
                     .token(app_config.tg_bot_token) \
+                    .base_url(app_config.tg_base_url) \
                     .persistence(persistence) \
                     .build()
 
@@ -87,11 +89,12 @@ def main():
             CommandHandler('start', handle_start_command),
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
-            CallbackQueryHandler(handle_delete_callback, r'delete:'),
-            CallbackQueryHandler(handle_details_callback, r'details:'),
-            CallbackQueryHandler(handle_episodes_callback, r'episodes:'),
-            CallbackQueryHandler(handle_seasons_callback, r'seasons:'),
-            CallbackQueryHandler(handle_history_callback, r'history:'),
+            CallbackQueryHandler(handle_delete_callback, r'delete_'),
+            CallbackQueryHandler(handle_details_callback, r'details_'),
+            CallbackQueryHandler(handle_episodes_callback, r'episodes_'),
+            CallbackQueryHandler(handle_play_callback, r'play_'),
+            CallbackQueryHandler(handle_seasons_callback, r'seasons_'),
+            CallbackQueryHandler(handle_history_callback, r'history_'),
             CallbackQueryHandler(handle_unknown_callback),
         ],
         states={
@@ -105,7 +108,14 @@ def main():
     application.add_handler(conversation_handler)
     application.add_error_handler(error_handler)
 
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_webhook(
+        listen='0.0.0.0',
+        port=5000,
+        secret_token='ASecretTokenIHaveChangedByNow',
+        webhook_url='http://tg_video:5000',
+        # cert='cert_bot1.pem'
+    )
 
 
 if __name__ == '__main__':

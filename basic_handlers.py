@@ -9,13 +9,16 @@ from helpers import (
     add_episodes_markup_footer,
     get_button_text_for_episode,
     get_button_text_for_serial,
+    get_default_episode_markup,
     get_paginated_markup,
     get_seasons_markup,
     get_serial_detail_markup,
 )
 from queries import (
     get_aggregated_view_history,
+    get_episode_by_id,
     get_episodes_by_serial_id,
+    get_next_episode_id,
     get_seasons_by_serial_id,
     get_serial_by_id,
 )
@@ -80,7 +83,7 @@ async def handle_history_command(update, context):
 
 async def handle_history_callback(update, context):
     callback_query = update.callback_query
-    _, page = callback_query.data.split(':')
+    _, page = callback_query.data.split('_')
     context.args = [page,]
     await handle_history_command(update, context)
     await handle_delete_callback(update, context)
@@ -88,7 +91,7 @@ async def handle_history_callback(update, context):
 
 async def handle_details_callback(update, context):
     callback_query = update.callback_query
-    _, serial_id = callback_query.data.split(':')
+    _, serial_id = callback_query.data.split('_')
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
@@ -108,7 +111,7 @@ async def handle_details_callback(update, context):
 
 async def handle_seasons_callback(update, context):
     callback_query = update.callback_query
-    _, serial_id = callback_query.data.split(':')
+    _, serial_id = callback_query.data.split('_')
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
@@ -130,7 +133,7 @@ async def handle_seasons_callback(update, context):
 
 async def handle_episodes_callback(update, context):
     callback_query = update.callback_query
-    _, serial_id, season, page = callback_query.data.split(':')
+    _, serial_id, season, page = callback_query.data.split('_')
     current_page = int(page)
     page_length = context.application.parameters.get('page_length')
     user_id = update.effective_sender.id
@@ -147,12 +150,14 @@ async def handle_episodes_callback(update, context):
         except(NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
             raise
+        logging.debug(episodes)
         buttons_callbacks = [get_button_text_for_episode(episode) for episode in episodes] # noqa E501
+        logging.debug(buttons_callbacks)
         total_pages = total_lines // page_length
         total_pages += 1 if total_lines % page_length else 0
         reply_markup = get_paginated_markup(
                 buttons_callbacks, 
-                f'episodes:{serial_id}:{season}', 
+                f'episodes_{serial_id}_{season}', 
                 current_page, 
                 total_pages)
         reply_markup = add_episodes_markup_footer(reply_markup, serial_id)
@@ -166,6 +171,38 @@ async def handle_episodes_callback(update, context):
                     f'Страница {current_page} из {total_pages}',
             reply_markup=reply_markup,
         )
+    await handle_delete_callback(update, context)
+
+
+async def handle_play_callback(update, context):
+    callback_query = update.callback_query
+    _, episode_id = callback_query.data.split('_')
+    with context.application.database.session() as db:
+        try:
+            episode = get_episode_by_id(db, episode_id)
+            next_episode_id = get_next_episode_id(db, episode)
+        except(NoResultFound, MultipleResultsFound) as e:
+            await callback_query.answer(f'Ошибка {e} при загрузке сериала {episode_id}') # noqa E501
+            raise
+        caption = (
+            f'<a href="https://t.me/KinoSpisokBot/start={episode.serial_id}">'
+            f'<b>{episode.name_rus} ({episode.name_eng})</b></a>\n'
+            f'<u>Episode:</u>[{episode.season}x{episode.episode}]\n'
+            f'<i>{episode.name}</i>\n'
+            f'<a href="https://t.me/KinoSpisokBot">Еще больше сериалов в @KinoSpisokBot</a>' # noqa E501
+        )
+        kwargs = {
+            'chat_id': update.effective_chat.id,
+            'parse_mode': 'HTML',
+            'caption': caption,
+            'reply_markup': get_default_episode_markup(episode, next_episode_id), # noqa E501
+        }
+        if context.application.parameters.get('debug', False):
+            await context.bot.send_photo(
+                photo=POSTERS_URL.format(episode.serial_id), **kwargs)
+        else:
+            await context.bot.send_video(video=episode.file_id, **kwargs)
+                
     await handle_delete_callback(update, context)
 
 

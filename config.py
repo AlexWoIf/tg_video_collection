@@ -16,10 +16,10 @@ class Config():
 
         tg_bot_token = os.getenv('TG_BOT_TOKEN', '')
         self.tg_bot_token = tg_bot_token
-        tg_base_url = os.getenv('TG_BASE_URL', 'https://api.telegram.org/bot')
-        self.tg_api_url = f'{tg_base_url}{tg_bot_token}'
+        self.tg_base_url = os.getenv('TG_API', 'https://api.telegram.org/bot')
 
         self.parameters = {
+            'debug': os.getenv('DEBUG', 'False').lower() == 'true',
             'storage_chat_id': os.getenv('STORAGE_CHAT_ID', ''),
             'page_length': int(os.getenv('MAX_PAGE_LENGTH', '10')),
         }

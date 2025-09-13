@@ -36,7 +36,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
-logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 BASIC_MODE, = range(1)
 
@@ -46,33 +46,38 @@ async def error_handler(update, context):
         Handle errors thrown by the dispatcher. Log them and send a message
         to the bot admin.
     """
-    logger.error(msg="Error during mrssage processing:",
+    logger = logging.getLogger(__name__)
+    logger.error(msg="Error during message processing.",
                  exc_info=context.error)
 
-    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_list = traceback.format_exception(
+        None, context.error, context.error.__traceback__)
     tb_string = ''.join(tb_list)
 
-    update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    message = (
+    update_str = update.to_dict() if isinstance(update, Update) \
+        else str(update)
+    messages = (
         f'Возникло исключение при обработке сообщения.\n'
-        f'<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}'
-        '</pre>\n\n'
-        f'<pre>context.bot_data = {html.escape(str(context.bot_data))}</pre>\n\n'
-        f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n'
-        f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n'
-        f'<pre>{html.escape(tb_string)}</pre>'
+        f'<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))[:4085]}</pre>', # noqa: E501
+        f'<pre>context.bot_data = {html.escape(str(context.bot_data))}</pre>\n\n', # noqa: E501
+        f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n', # noqa: E501
+        f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n', # noqa: E501
+        f'<pre>{html.escape(tb_string)[:4085]}</pre>'
     )
-
     chat_id = context.bot_data.get('storage_chat_id', '382219005')
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=message,
-        parse_mode=ParseMode.HTML)
+    for message in messages:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message,
+            parse_mode=ParseMode.HTML)
 
 
 def main():
     """Run the bot."""
     app_config = Config()
+    logging.getLogger().setLevel(
+        logging.DEBUG if app_config.parameters['debug'] else logging.INFO
+    )
 
     persistence = PicklePersistence(filepath='persistence.pickle')
     application = Application.builder() \

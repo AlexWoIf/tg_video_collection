@@ -213,8 +213,6 @@ async def handle_delete_callback(update, context):
     except tg_error.BadRequest:
         logging.error('Delete: BadRequest')
         await update.callback_query.answer('Старые сообщения не могут быть удалены') # noqa E501
-        return
-    await update.callback_query.answer()
 
 
 async def handle_unknown_callback(update, context):

@@ -129,16 +129,15 @@ def add_episodes_markup_footer(reply_markup, serial_id):
 def get_default_episode_markup(episode, next_episode_id):
     keyboard = [
         [
-            
             InlineKeyboardButton(
-                '👉 Следующий эпизод', callback_data=f'play_{next_episode_id}' # noqa E501
-            ),
+                '👉 Следующий эпизод',
+                callback_data=f'play_{next_episode_id}'
+            )
         ] if next_episode_id else [],
-    ]
-    keyboard += [
         [
             InlineKeyboardButton(
-                LISTEPISODES, callback_data = f'episodes_{episode.serial_id}_{episode.season}_1' # noqa E501
+                LISTEPISODES,
+                callback_data = f'episodes_{episode.serial_id}_{episode.season}_1' # noqa E501
             ),
         ],
         [
@@ -152,6 +151,6 @@ def get_default_episode_markup(episode, next_episode_id):
         [
             InlineKeyboardButton(COMPLAIN, url = SUPPORT_LINK),
             InlineKeyboardButton(DELETE, callback_data = "delete_"),
-        ]
+        ],
     ]
     return InlineKeyboardMarkup(keyboard)

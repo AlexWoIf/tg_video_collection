@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, case, or_, and_
+from sqlalchemy import func, case, or_, and_
 from models import *
 
 def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offset: int = 0):
@@ -158,3 +160,26 @@ def get_next_episode_id(db: Session, current_episode):
         Episode.episode
     ).first()
     return next_episode[0] if next_episode else None
+
+
+def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
+    db.add(
+        EpisodeViewRecord(
+            user_id=user_id,
+            episode_id=episode_id,
+            updated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        )
+    )
+
+
+def insert_new_user(db: Session, user):
+    db.merge(
+        User(
+            id=user.id,
+            username=user.username or '',
+            first_name=user.first_name or '',
+            last_name=user.last_name or '',
+            language_code=user.language_code or '',
+            is_bot=user.is_bot,
+        )
+    )

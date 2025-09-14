@@ -21,6 +21,8 @@ from queries import (
     get_next_episode_id,
     get_seasons_by_serial_id,
     get_serial_by_id,
+    insert_episode_view_record,
+    insert_new_user,
 )
 
 
@@ -42,11 +44,11 @@ async def handle_help_command(update, context):
 
 
 async def handle_start_command(update, context):
+    with context.application.database.session() as db:
+        insert_new_user(db, update.effective_sender)
     if not context.args:
         await handle_help_command(update, context)
         return
-    reply_text = f'"{'", "'.join(context.args)}"'
-    await update.message.reply_text(reply_text)
 
 
 async def handle_history_command(update, context):
@@ -202,6 +204,8 @@ async def handle_play_callback(update, context):
                 photo=POSTERS_URL.format(episode.serial_id), **kwargs)
         else:
             await context.bot.send_video(video=episode.file_id, **kwargs)
+        user_id = update.effective_sender.id
+        insert_episode_view_record(db, user_id, episode_id)
                 
     await handle_delete_callback(update, context)
 

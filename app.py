@@ -1,47 +1,32 @@
-import json
 import html
+import json
 import logging
 import traceback
 
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import (
-    Application,
-    CallbackQueryHandler,
-    CommandHandler,
-    ConversationHandler,
-    MessageHandler,
-    PicklePersistence,
-    filters,
-)
+from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
+                          ConversationHandler, MessageHandler,
+                          PicklePersistence, filters)
 
-from basic_handlers import (
-    handle_delete_callback,
-    handle_details_callback,
-    handle_episodes_callback,
-    handle_history_callback,
-    handle_history_command,
-    handle_help_command,
-    handle_play_callback,
-    handle_rating_command,
-    handle_rating_callback,
-    handle_seasons_callback,
-    handle_search_callback,
-    handle_search_text,
-    handle_start_command,
-    handle_unknown_callback,
-)
-from db import Database
+from basic_handlers import (handle_delete_callback, handle_details_callback,
+                            handle_episodes_callback, handle_help_command,
+                            handle_history_callback, handle_history_command,
+                            handle_play_callback, handle_rating_callback,
+                            handle_rating_command, handle_search_callback,
+                            handle_search_text, handle_seasons_callback,
+                            handle_start_command, handle_unknown_callback)
 from config import Config
+from db import Database
 
+
+BASIC_MODE, = range(1)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
-BASIC_MODE, = range(1)
 
 
 async def error_handler(update, context):

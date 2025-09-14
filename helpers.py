@@ -1,9 +1,7 @@
 import re
 
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.helpers import create_deep_linked_url
 
 
 DELETE = '\u274c Удалить'
@@ -14,7 +12,6 @@ LISTSEASONS = '🗂️ Список сезонов'
 SERIALDETAILS = '\u2139 Информация о сериале'
 COMPLAIN = '⚠ Сообщить о проблеме'
 SUPPORT_LINK = 'tg://resolve?domain=AlexWolf_kornet'
-
 
 
 def format_numeric(number, keyword):
@@ -44,6 +41,9 @@ def get_search_text(text):
     else:
         raise ValueError
 
+
+def get_deep_link(bot_name, callback_data):
+    return create_deep_linked_url(bot_name, callback_data)
 
 def get_button_text_for_serial(serial, max_length=40, counter=True):
     if counter:

@@ -1,8 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Session
 from sqlalchemy import and_, case, distinct, func, or_
+from sqlalchemy.orm import Session
+
 from models import *
+
 
 def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offset: int = 0):
     """
@@ -66,7 +68,18 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
 
 
 def get_serial_by_id(db: Session, serial_id: int):
-    return db.query(Serial).filter(Serial.id == serial_id).one()
+    return db.query(
+        Serial.id,
+        Serial.name_rus,
+        Serial.name_eng,
+        Serial.creators,
+        Serial.studio,
+        Serial.format,
+        Serial.actors,
+        Serial.descr,
+        Serial.IMDB,
+        Serial.kp_id
+    ).filter(Serial.id == serial_id).one()
 
 
 def get_serials_by_namepart(db: Session, name_part: str, limit=10, page=1):

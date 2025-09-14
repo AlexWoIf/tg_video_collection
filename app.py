@@ -81,11 +81,11 @@ def main():
         logging.DEBUG if app_config.parameters['debug'] else logging.INFO
     )
 
-    persistence = PicklePersistence(filepath='persistence.pickle')
+    # persistence = PicklePersistence(filepath='persistence.pickle')
+    # Для включения добавить в инициализацию    .persistence(persistence)
     application = Application.builder() \
                     .token(app_config.tg_bot_token) \
                     .base_url(app_config.tg_base_url) \
-                    .persistence(persistence) \
                     .build()
 
     application.database = Database(app_config.db_url, )
@@ -111,7 +111,7 @@ def main():
         },
         fallbacks=[],
         name='main_conversation',
-        persistent=True,
+        persistent=False,
     )
 
     application.add_handler(conversation_handler)
@@ -120,10 +120,9 @@ def main():
     # application.run_polling(allowed_updates=Update.ALL_TYPES)
     application.run_webhook(
         listen='0.0.0.0',
-        port=5000,
+        port=app_config.tg_webhook_port,
         secret_token='ASecretTokenIHaveChangedByNow',
-        webhook_url='http://tg_video:5000',
-        # cert='cert_bot1.pem'
+        webhook_url=app_config.tg_webhook_url,
     )
 
 

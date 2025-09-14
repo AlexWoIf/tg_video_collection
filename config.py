@@ -17,6 +17,8 @@ class Config():
         tg_bot_token = os.getenv('TG_BOT_TOKEN', '')
         self.tg_bot_token = tg_bot_token
         self.tg_base_url = os.getenv('TG_API', 'https://api.telegram.org/bot')
+        self.tg_webhook_url = os.getenv('TG_WEBHOOK_URL')
+        self.tg_webhook_port = int(os.getenv('TG_WEBHOOK_PORT', '5000'))
 
         self.parameters = {
             'debug': os.getenv('DEBUG', 'False').lower() == 'true',

@@ -69,6 +69,21 @@ def get_serial_by_id(db: Session, serial_id: int):
     return db.query(Serial).filter(Serial.id == serial_id).one()
 
 
+def get_serials_by_namepart(db: Session, name_part: str, limit=10, page=1):
+    offset = limit * (page - 1)
+    query = db.query(
+        Serial.name_rus,
+        Serial.name_eng,
+        Serial.id
+    ).filter(
+        or_(
+            Serial.name_rus.like(f'{name_part}'),
+            Serial.name_eng.like(f'{name_part}')
+        )
+    )
+    return query.limit(limit).offset(offset).all(), query.count()
+
+
 def get_seasons_by_serial_id(db: Session, serial_id: int):
         return db.query(
         Episode.season,

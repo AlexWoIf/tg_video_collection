@@ -1,3 +1,5 @@
+import re
+
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -35,10 +37,21 @@ def format_numeric(number, keyword):
         return f'{number} {word_forms[2]}'
 
 
-def get_button_text_for_serial(serial, max_length=40):
-    name_rus, name_eng, counter, serial_id = serial
-    counter_part = f'[{counter}]'
+def get_search_text(text):
+    match = re.search(r'"%*(?P<text>.*)%*"', text)
+    if match:
+        return match.group('text')
+    else:
+        raise ValueError
 
+
+def get_button_text_for_serial(serial, max_length=40, counter=True):
+    if counter:
+        name_rus, name_eng, counter, serial_id = serial
+        counter_part = f'[{counter}]'
+    else:
+        name_rus, name_eng, serial_id = serial
+        counter_part = ''
     name_part = f'{name_rus}({name_eng})'
     if len(name_part) > (max_length - len(counter_part)):
         name_part = f'{name_part[:max_length - len(counter_part) - 3]}...'

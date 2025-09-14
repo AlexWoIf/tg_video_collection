@@ -9,7 +9,6 @@ from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
-    ContextTypes,
     ConversationHandler,
     MessageHandler,
     PicklePersistence,
@@ -27,6 +26,8 @@ from basic_handlers import (
     handle_rating_command,
     handle_rating_callback,
     handle_seasons_callback,
+    handle_search_callback,
+    handle_search_text,
     handle_start_command,
     handle_unknown_callback,
 )
@@ -97,11 +98,15 @@ def main():
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
             CommandHandler('rating', handle_rating_command),
+            MessageHandler(
+                filters.TEXT & (~filters.COMMAND) & (~filters.Entity("url"))
+                & (~filters.Entity("text_link")), handle_search_text, ),
             CallbackQueryHandler(handle_delete_callback, r'delete_'),
             CallbackQueryHandler(handle_details_callback, r'details_'),
             CallbackQueryHandler(handle_episodes_callback, r'episodes_'),
             CallbackQueryHandler(handle_play_callback, r'play_'),
             CallbackQueryHandler(handle_rating_callback, r'rating_'),
+            CallbackQueryHandler(handle_search_callback, r'search_'),
             CallbackQueryHandler(handle_seasons_callback, r'seasons_'),
             CallbackQueryHandler(handle_history_callback, r'history_'),
             CallbackQueryHandler(handle_unknown_callback),

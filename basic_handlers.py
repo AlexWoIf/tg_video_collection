@@ -7,6 +7,7 @@ from telegram import (
 
 from messages import (
     format_rating_message,
+    format_search_message,
 )
 from helpers import (
     add_episodes_markup_footer,
@@ -14,6 +15,7 @@ from helpers import (
     get_button_text_for_serial,
     get_default_episode_markup,
     get_paginated_markup,
+    get_search_text,
     get_seasons_markup,
     get_serial_detail_markup,
 )
@@ -25,6 +27,7 @@ from queries import (
     get_seasons_by_serial_id,
     get_serials_rating,
     get_serial_by_id,
+    get_serials_by_namepart,
     insert_episode_view_record,
     insert_new_user,
 )
@@ -110,7 +113,53 @@ async def handle_rating_callback(update, context):
     page_length = context.application.parameters.get('page_length')
     with context.application.database.session() as db:
         serials, num_lines = get_serials_rating(db, page_length, page)
-    text, markup = format_rating_message(serials, num_lines, page, page_length)
+        text, markup = format_rating_message(
+            serials, num_lines, page, page_length)
+    await update.effective_chat.send_message(
+        parse_mode='HTML',
+        text=text,
+        reply_markup = markup,
+    )
+    await handle_delete_callback(update, context)
+
+
+async def handle_search_text(update, context):
+    namepart = f'{update.message.text.lower()}'
+    page = 1
+    page_length = context.application.parameters.get('page_length')
+    search_text = f'%{namepart}%' if len(namepart) > 2 else f'{namepart}%'
+    with context.application.database.session() as db:
+        serials, num_lines = get_serials_by_namepart(
+            db, search_text, page_length, page)
+        text, markup = format_search_message(
+            namepart, serials, num_lines, page, page_length)
+    await update.effective_chat.send_message(
+        parse_mode='HTML',
+        text=text,
+        reply_markup = markup,
+    )
+
+
+async def handle_search_callback(update, context):
+    callback_query = update.callback_query
+    _, page = callback_query.data.split('_')
+    page = int(page)
+    page_length = context.application.parameters.get('page_length')
+    try:
+        namepart = get_search_text(update.effective_message.text)
+    except (ValueError, AttributeError):
+        await update.effective_chat.send_message(
+            'Результаты поиска устарели.\n'
+            'Введите строку для поиска заново.'
+            f'\n"{update.effective_message.text}"'
+        )
+        return
+    search_text = f'%{namepart}%' if len(namepart) > 2 else f'{namepart}%'
+    with context.application.database.session() as db:
+        serials, num_lines = get_serials_by_namepart(
+            db, search_text, page_length, page)
+        text, markup = format_search_message(
+            namepart, serials, num_lines, page, page_length)
     await update.effective_chat.send_message(
         parse_mode='HTML',
         text=text,

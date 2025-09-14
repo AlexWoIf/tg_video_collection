@@ -5,6 +5,9 @@ from telegram import (
     error as tg_error,
 )
 
+from messages import (
+    format_rating_message,
+)
 from helpers import (
     add_episodes_markup_footer,
     get_button_text_for_episode,
@@ -20,6 +23,7 @@ from queries import (
     get_episodes_by_serial_id,
     get_next_episode_id,
     get_seasons_by_serial_id,
+    get_serials_rating,
     get_serial_by_id,
     insert_episode_view_record,
     insert_new_user,
@@ -48,7 +52,6 @@ async def handle_start_command(update, context):
         insert_new_user(db, update.effective_sender)
     if not context.args:
         await handle_help_command(update, context)
-        return
 
 
 async def handle_history_command(update, context):
@@ -60,11 +63,8 @@ async def handle_history_command(update, context):
         history, total_lines = get_aggregated_view_history(
             db, user_id, page_length, offset)
         if not history:
-            reply_text = 'История просмотров пуста'
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=reply_text
-            )
+            text = 'История просмотров пуста'
+            await update.effective_chat.send_message(text=text)
             return
         total_pages = total_lines // page_length
         total_pages += 1 if total_lines % page_length else 0
@@ -75,19 +75,47 @@ async def handle_history_command(update, context):
         'В квадратных скобках указано количество просмотров эпизодов.'
         f'Страница {page} из {total_pages}'
     )
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id, 
+    await update.effective_chat.send_message(
         text=reply_text,
         reply_markup = get_paginated_markup(
             buttons_callbacks, 'history', page, total_pages),
     )
 
 
+async def handle_rating_command(update, context):
+    page = int(context.args[0]) if context.args else 1
+    page_length = context.application.parameters.get('page_length')
+    with context.application.database.session() as db:
+        serials, num_lines = get_serials_rating(db, page_length, page)
+    text, markup = format_rating_message(serials, num_lines, page, page_length)
+    await update.effective_chat.send_message(
+        parse_mode='HTML',
+        text=text,
+        reply_markup = markup,
+    )
+
+
 async def handle_history_callback(update, context):
     callback_query = update.callback_query
     _, page = callback_query.data.split('_')
-    context.args = [page,]
+    context.args = [int(page),]
     await handle_history_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_rating_callback(update, context):
+    callback_query = update.callback_query
+    _, page = callback_query.data.split('_')
+    page = int(page)
+    page_length = context.application.parameters.get('page_length')
+    with context.application.database.session() as db:
+        serials, num_lines = get_serials_rating(db, page_length, page)
+    text, markup = format_rating_message(serials, num_lines, page, page_length)
+    await update.effective_chat.send_message(
+        parse_mode='HTML',
+        text=text,
+        reply_markup = markup,
+    )
     await handle_delete_callback(update, context)
 
 

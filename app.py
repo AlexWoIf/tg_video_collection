@@ -107,14 +107,15 @@ def main():
     application.add_handler(conversation_handler)
     application.add_error_handler(error_handler)
 
-    # application.run_polling(allowed_updates=Update.ALL_TYPES)
-    application.run_webhook(
-        listen='0.0.0.0',
-        port=app_config.tg_webhook_port,
-        secret_token='ASecretTokenIHaveChangedByNow',
-        webhook_url=app_config.tg_webhook_url,
-    )
-
-
+    if app_config.tg_webhook_port and app_config.tg_webhook_url:
+        application.run_webhook(
+            listen='0.0.0.0',
+            port=app_config.tg_webhook_port,
+            secret_token='ASecretTokenIHaveChangedByNow',
+            webhook_url=app_config.tg_webhook_url,
+        )
+    else:
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+    
 if __name__ == '__main__':
     main()

@@ -1,0 +1,16 @@
+services:
+
+  tg_video_bot:
+    build:
+      context: .
+    container_name: tg_video_bot
+    restart: "always"
+    volumes:
+      - ./:/app
+    working_dir: /app
+    entrypoint: ["python", "app.py"]
+
+networks:
+  default:
+    name: webapp_backend
+    external: true

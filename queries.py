@@ -67,6 +67,24 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     return query.limit(limit).offset(offset).all(), query.count()
 
 
+def get_alphabet_counts(db, language):
+    name_expr = case(
+        (language == 'RUS', Serial.name_rus),
+        else_=Serial.name_eng
+    )
+    
+    result = db.query(
+        func.upper(func.substr(name_expr, 1, 1)).label('letter'),
+        func.count(Serial.id).label('count')
+    ).group_by(
+        func.upper(func.substr(name_expr, 1, 1))
+    ).order_by(
+        'letter'
+    ).all()
+    
+    return result
+
+
 def get_serial_by_id(db: Session, serial_id: int):
     return db.query(
         Serial.id,

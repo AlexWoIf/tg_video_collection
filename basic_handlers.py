@@ -4,19 +4,36 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from telegram import error as tg_error
 
 from helpers import get_search_text
-from messages import (format_details_message, format_episodes_message,
-                      format_help_message, format_history_message,
-                      format_play_message, format_rating_message,
-                      format_search_message, format_seasons_message)
-from queries import (get_aggregated_view_history, get_episode_by_id,
-                     get_episodes_by_serial_id, get_next_episode_id,
-                     get_seasons_by_serial_id, get_serial_by_id,
-                     get_serials_by_namepart, get_serials_rating,
-                     insert_episode_view_record, insert_new_user)
-
+from messages import (format_alphabet_message, format_details_message,
+                      format_episodes_message, format_help_message,
+                      format_history_message, format_play_message,
+                      format_rating_message, format_search_message,
+                      format_seasons_message)
+from queries import (get_aggregated_view_history, get_alphabet_counts,
+                     get_episode_by_id, get_episodes_by_serial_id,
+                     get_next_episode_id, get_seasons_by_serial_id,
+                     get_serial_by_id, get_serials_by_namepart,
+                     get_serials_rating, insert_episode_view_record,
+                     insert_new_user)
 
 POSTERS_URL = "https://alexwolf.ru/ksb/covers/{}.jpg"
 
+
+async def handle_alphabet_callback(update, context):
+    callback_query = update.callback_query
+    _, language = callback_query.data.split('_')
+    context.args = [language,]
+    await handle_alphabet_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_alphabet_command(update, context):
+    is_english = context.args and context.args[0].lower().startswith('en')
+    language = 'ENG' if is_english else 'RUS'
+    with context.application.database.session() as db:
+        letters = get_alphabet_counts(db, language)
+    text, markup = format_alphabet_message(letters)
+    await update.effective_chat.send_message(text=text, reply_markup=markup, )
 
 async def handle_delete_callback(update, context):
     try:
@@ -54,12 +71,9 @@ async def handle_episodes_callback(update, context):
         try:
             serial = get_serial_by_id(db, serial_id)
             episodes, total_lines = get_episodes_by_serial_id(
-                db,
-                serial_id,
-                season,
-                user_id,
-                page_length,
-                (current_page - 1) * page_length)
+                db, serial_id, season, user_id, page_length,
+                (current_page - 1) * page_length
+            )
         except(NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
             raise
@@ -151,9 +165,8 @@ async def handle_search_callback(update, context):
     callback_query = update.callback_query
     _, page = callback_query.data.split('_')
     page = int(page)
-    page_length = context.application.parameters.get('page_length')
     try:
-        namepart = get_search_text(update.effective_message.text)
+        search_text = get_search_text(update.effective_message.text)
     except (ValueError, AttributeError):
         await update.effective_chat.send_message(
             'Результаты поиска устарели.\n'
@@ -161,35 +174,38 @@ async def handle_search_callback(update, context):
             f'\n"{update.effective_message.text}"'
         )
         return
-    search_text = f'%{namepart}%' if len(namepart) > 2 else f'{namepart}%'
+    context.args = [search_text, page]
+    await handle_search_command(update, context)
+    await handle_delete_callback(update, context)
+    return
+
+
+async def handle_search_command(update, context):
+    if not context.args:
+        await update.effective_chat.send_message(
+            'Введите строку для поиска сериала')
+        return
+    search_text = context.args.pop(0)
+    page = context.args.pop(0) if context.args else 1
+    page_length = context.application.parameters.get('page_length')
+    namepart = f'%{search_text}%' if len(search_text) > 2 else f'{search_text}%' # noqa E501
     with context.application.database.session() as db:
         serials, num_lines = get_serials_by_namepart(
-            db, search_text, page_length, page)
+            db, namepart, page_length, page)
         text, markup = format_search_message(
-            namepart, serials, num_lines, page, page_length)
+            search_text, serials, num_lines, page, page_length)
     await update.effective_chat.send_message(
         parse_mode='HTML',
         text=text,
         reply_markup = markup,
     )
-    await handle_delete_callback(update, context)
 
 
 async def handle_search_text(update, context):
-    namepart = f'{update.message.text.lower()}'
+    search_text = f'{update.message.text.lower()}'
     page = 1
-    page_length = context.application.parameters.get('page_length')
-    search_text = f'%{namepart}%' if len(namepart) > 2 else f'{namepart}%'
-    with context.application.database.session() as db:
-        serials, num_lines = get_serials_by_namepart(
-            db, search_text, page_length, page)
-        text, markup = format_search_message(
-            namepart, serials, num_lines, page, page_length)
-    await update.effective_chat.send_message(
-        parse_mode='HTML',
-        text=text,
-        reply_markup = markup,
-    )
+    context.args = [search_text, page]
+    await handle_search_command(update, context)
 
 
 async def handle_seasons_callback(update, context):
@@ -218,6 +234,15 @@ async def handle_start_command(update, context):
     if not context.args:
         reply_text=format_help_message()
         await update.message.reply_text(reply_text)
+
+
+async def handle_text_callback(update, context):
+    callback_query = update.callback_query
+    _, search_text = callback_query.data.split('_')
+    page = 1
+    context.args = [search_text, page]
+    await handle_search_command(update, context)
+    await handle_delete_callback(update, context)
 
 
 async def handle_unknown_callback(update, context):

@@ -9,16 +9,17 @@ from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           ConversationHandler, MessageHandler,
                           PicklePersistence, filters)
 
-from basic_handlers import (handle_delete_callback, handle_details_callback,
+from basic_handlers import (handle_alphabet_callback, handle_alphabet_command,
+                            handle_delete_callback, handle_details_callback,
                             handle_episodes_callback, handle_help_command,
                             handle_history_callback, handle_history_command,
                             handle_play_callback, handle_rating_callback,
                             handle_rating_command, handle_search_callback,
-                            handle_search_text, handle_seasons_callback,
-                            handle_start_command, handle_unknown_callback)
+                            handle_search_command, handle_search_text,
+                            handle_seasons_callback, handle_start_command,
+                            handle_text_callback, handle_unknown_callback)
 from config import Config
 from db import Database
-
 
 BASIC_MODE, = range(1)
 
@@ -83,9 +84,12 @@ def main():
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
             CommandHandler('rating', handle_rating_command),
+            CommandHandler('alphabet', handle_alphabet_command),
+            CommandHandler('search', handle_search_command),
             MessageHandler(
                 filters.TEXT & (~filters.COMMAND) & (~filters.Entity("url"))
                 & (~filters.Entity("text_link")), handle_search_text, ),
+            CallbackQueryHandler(handle_alphabet_callback, r'alphabet_'),
             CallbackQueryHandler(handle_delete_callback, r'delete_'),
             CallbackQueryHandler(handle_details_callback, r'details_'),
             CallbackQueryHandler(handle_episodes_callback, r'episodes_'),
@@ -93,6 +97,7 @@ def main():
             CallbackQueryHandler(handle_rating_callback, r'rating_'),
             CallbackQueryHandler(handle_search_callback, r'search_'),
             CallbackQueryHandler(handle_seasons_callback, r'seasons_'),
+            CallbackQueryHandler(handle_text_callback, r'text_'),
             CallbackQueryHandler(handle_history_callback, r'history_'),
             CallbackQueryHandler(handle_unknown_callback),
         ],

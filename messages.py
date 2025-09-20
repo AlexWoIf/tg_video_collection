@@ -1,5 +1,6 @@
 from helpers import (
     add_episodes_markup_footer,
+    get_alphabet_markup,
     get_button_text_for_episode,
     get_button_text_for_serial,
     get_deep_link,
@@ -8,6 +9,13 @@ from helpers import (
     get_serial_detail_markup,
     get_seasons_markup,
 )
+
+
+def format_alphabet_message(letters):
+    text = 'Выбарите начальную букву сериала.\n' \
+           'В квадратных скобках указано количество сериалов.\n'
+    markup = get_alphabet_markup(letters)
+    return text, markup
 
 
 def format_help_message():

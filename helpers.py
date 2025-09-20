@@ -68,6 +68,23 @@ def get_button_text_for_episode(episode, max_length=40):
     }
 
 
+def get_alphabet_markup(letters):
+    buttons = [{'text': '{}[{}]'.format(*letter), 
+                'callback_data': f'text_{letter.letter}'}
+               for letter in letters]
+    row_length = 6
+    keyboard = [
+        list(map(lambda button: InlineKeyboardButton(**button), 
+        buttons[i:i+row_length]))
+        for i in range(0, len(buttons), row_length)
+    ]
+    keyboard.append([
+        InlineKeyboardButton('RUS', callback_data='alphabet_RUS'),
+        InlineKeyboardButton('ENG', callback_data='alphabet_ENG'),
+    ])
+    return InlineKeyboardMarkup(keyboard)
+
+
 def get_paginated_markup(buttons_callbacks, list_type, current_page=1, total_pages=1, ): # noqa: E501
     keyboard = [
         [InlineKeyboardButton(**button_callback)]

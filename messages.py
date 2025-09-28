@@ -69,7 +69,11 @@ def format_history_message(serials, total_lines, page, page_length):
     return text, markup
 
 
-def format_play_message(bot_name, episode, next_episode_id):
+def format_play_message(bot_name, files, file_id, next_episode_id):
+    for row, file in enumerate(files):
+        if file.file_id == file_id:
+            episode = files.pop(row)
+            break
     text = (
         f'<a href="{get_deep_link(bot_name, f'{episode.serial_id}')}">'
         f'<b>{episode.name_rus} ({episode.name_eng})</b></a>\n'
@@ -78,8 +82,10 @@ def format_play_message(bot_name, episode, next_episode_id):
         f'<a href="{get_deep_link(bot_name, 'serial')}">'
         'Еще больше сериалов в @KinoSpisokBot</a>'
     )
-    markup = get_default_episode_markup(episode, next_episode_id)
-    return text, markup
+    if files:
+        text += f'\n[{episode.width}x{episode.height}] {episode.audio}'
+    markup = get_default_episode_markup(episode, files, next_episode_id)
+    return text, markup, episode
 
 
 def format_rating_message(serials, total_lines, page, page_length):

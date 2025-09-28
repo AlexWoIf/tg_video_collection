@@ -11,7 +11,7 @@ from messages import (format_alphabet_message, format_details_message,
                       format_seasons_message)
 from queries import (get_aggregated_view_history, get_alphabet_counts,
                      get_episode_by_id, get_episodes_by_serial_id,
-                     get_next_episode_id, get_seasons_by_serial_id,
+                     get_next_episode, get_seasons_by_serial_id,
                      get_serial_by_id, get_serials_by_namepart,
                      get_serials_rating, insert_episode_view_record,
                      insert_new_user)
@@ -119,24 +119,25 @@ async def handle_history_command(update, context):
 
 async def handle_play_callback(update, context):
     callback_query = update.callback_query
-    _, episode_id = callback_query.data.split('_')
+    _, episode_id, file_id = callback_query.data.split('_')
     with context.application.database.session() as db:
         try:
-            episode = get_episode_by_id(db, episode_id)
-            next_episode_id = get_next_episode_id(db, episode)
+            files = get_episode_by_id(db, episode_id)
+            next_episode = get_next_episode(db, files[0])
         except(NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(
                 f'Ошибка {e} при загрузке сериала {episode_id}') 
             raise
         insert_episode_view_record(db, update.effective_sender.id, episode_id)
-    text, markup = format_play_message(context.bot.username, episode,
-                                       next_episode_id)
+    text, markup, current_file = format_play_message(
+        context.bot.username, files, int(file_id), next_episode, )
     kwargs = {'parse_mode': 'HTML', 'caption': text, 'reply_markup': markup, }
     if context.application.parameters.get('debug', False):
         await update.effective_chat.send_photo(
-            photo=POSTERS_URL.format(episode.serial_id), **kwargs)
+            photo=POSTERS_URL.format(current_file.serial_id), **kwargs)
     else:
-        await update.effective_chat.send_video(video=episode.file_id, **kwargs)
+        await update.effective_chat.send_video(
+            video=current_file.file_id, **kwargs)
     await handle_delete_callback(update, context)
 
 

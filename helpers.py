@@ -61,10 +61,10 @@ def get_button_text_for_serial(serial, max_length=40, counter=True):
 
 
 def get_button_text_for_episode(episode, max_length=40):
-    season, episode, name, episode_id, views = episode
+    season, episode, name, episode_id, file_id, views = episode
     return {
         'text': f'{"✅" if views else ""}[{season}x{episode}]{name}',
-        'callback_data': f'play_{episode_id}'
+        'callback_data': f'play_{episode_id}_{file_id}'
     }
 
 
@@ -156,14 +156,23 @@ def add_episodes_markup_footer(reply_markup, serial_id):
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_default_episode_markup(episode, next_episode_id):
+def get_default_episode_markup(episode, episodes, next_episode):
     keyboard = [
         [
             InlineKeyboardButton(
                 '👉 Следующий эпизод',
-                callback_data=f'play_{next_episode_id}'
+                callback_data=f'play_{next_episode.id}_{next_episode.file_id}',
             )
-        ] if next_episode_id else [],
+        ] if next_episode.id else []
+    ]
+    keyboard += [
+            [InlineKeyboardButton(
+                f'[{row.width}x{row.height}] {row.audio}',
+                callback_data = f'play_{row.id}_{row.file_id}',
+            )]
+            for row in episodes
+        ]
+    keyboard += [
         [
             InlineKeyboardButton(
                 LISTEPISODES,

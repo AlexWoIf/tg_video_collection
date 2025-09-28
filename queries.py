@@ -95,7 +95,7 @@ def get_serial_by_id(db: Session, serial_id: int):
         Serial.format,
         Serial.actors,
         Serial.descr,
-        Serial.IMDB,
+        Serial.imdb,
         Serial.kp_id
     ).filter(Serial.id == serial_id).one()
 
@@ -144,6 +144,7 @@ def get_episodes_by_serial_id(
         Episode.episode,
         Episode.name,
         Episode.id,
+        Episode.file_id,
         subquery.c.views
     ).join(subquery, subquery.c.episode_id==Episode.id, isouter=True, ) \
      .filter(Episode.serial_id==serial_id, Episode.season==season, ) \
@@ -153,25 +154,33 @@ def get_episodes_by_serial_id(
     return query.limit(limit).offset(offset).all(), query.count()
 
 
-def get_episode_by_id(db: Session, episode_id: int):
+def get_episode_by_id(db: Session, episode_id: int, ):
     return db.query(
-        Episode.serial_id,
-        Serial.name_rus,
-        Serial.name_eng,
-        Episode.season,
-        Episode.episode,
-        Episode.name,
-        Audio.name.label('audio'),
-        Episode.file_id,
-        func.count(File.file_id).label('file_count')
-    ).join(Episode, Episode.serial_id==Serial.id, isouter=True, ) \
-     .join(File, File.episode_id==Episode.id, isouter=True, ) \
-     .join(Audio, Audio.id==File.audio_id, isouter=True, ) \
-     .group_by(Episode.id).filter(Episode.id==episode_id).one()
+    Episode.id,
+    Episode.serial_id,
+    Serial.name_rus,
+    Serial.name_eng,
+    Episode.season,
+    Episode.episode,
+    Episode.name,
+    File.id.label('file_id'),
+    File.width,
+    File.height,
+    Audio.name.label('audio'),
+).join(
+    Episode, Episode.serial_id==Serial.id, isouter=True,
+).join(
+    File, File.episode_id==Episode.id, isouter=True,
+).join(
+    Audio, Audio.id==File.audio_id, isouter=True,
+).filter(Episode.id==episode_id).all()
 
 
-def get_next_episode_id(db: Session, current_episode):
-    next_episode = db.query(Episode.id).filter(
+def get_next_episode(db: Session, current_episode):
+    next_episode = db.query(
+        Episode.id,
+        Episode.file_id
+    ).filter(
         Episode.serial_id == current_episode.serial_id,
         or_(
             and_(
@@ -188,7 +197,7 @@ def get_next_episode_id(db: Session, current_episode):
         )
     ).order_by(Episode.season, Episode.episode) \
      .first()
-    return next_episode[0] if next_episode else None
+    return next_episode
 
 
 def get_serials_rating(db: Session, limit=10, page=1):

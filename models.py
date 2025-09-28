@@ -34,7 +34,7 @@ class Serial(Base):
     format = Column(Text, nullable=False, default='')
     actors = Column(Text, nullable=False, default='')
     descr = Column(Text, nullable=False, default='')
-    IMDB = Column(String(10), nullable=False, default='')
+    imdb = Column(String(10), nullable=False, default='')
     kp_id = Column(String(10), nullable=False, default='')
 
     episodes = relationship('Episode', back_populates='serial')
@@ -67,7 +67,7 @@ class Episode(Base):
     season = Column(Integer, nullable=False, default=0)
     episode = Column(Integer, nullable=False, default=0)
     name = Column(Text, nullable=False, default='')
-    file_id = Column(Text, nullable=True, default='')
+    file_id = Column(Integer, ForeignKey('episodes.id'), nullable=True)
 
     serial = relationship('Serial', back_populates='episodes')
     files = relationship('File', back_populates='episode')
@@ -79,10 +79,14 @@ class Episode(Base):
 
 class File(Base):
     __tablename__ = 'files'
+    __table_args__ = (
+        UniqueConstraint('file_id', name='uq_file_id'),
+        Index('ix_file_id', 'file_id'),
+    )
 
-    episode_id = Column(BigInteger, ForeignKey('episodes.id'), primary_key=True, 
-                        nullable=False)
-    file_id = Column(String(128), primary_key=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    episode_id = Column(BigInteger, ForeignKey('episodes.id'), nullable=False)
+    file_id = Column(String(128), nullable=False)
     duration = Column(Integer, nullable=False, default=0)
     width = Column(SmallInteger, nullable=False, default=0)
     height = Column(SmallInteger, nullable=False, default=0)

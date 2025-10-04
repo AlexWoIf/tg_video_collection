@@ -1,4 +1,5 @@
 import logging
+import re
 
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from telegram import error as tg_error
@@ -9,10 +10,11 @@ from messages import (format_alphabet_message, format_details_message,
                       format_history_message, format_play_message,
                       format_rating_message, format_search_message,
                       format_seasons_message)
-from queries import (get_aggregated_view_history, get_alphabet_counts,
-                     get_episode_by_id, get_episodes_by_serial_id,
-                     get_next_episode, get_seasons_by_serial_id,
-                     get_serial_by_id, get_serials_by_namepart,
+from queries import (create_new_movie_request, get_aggregated_view_history,
+                     get_alphabet_counts, get_episode_by_id,
+                     get_episodes_by_serial_id, get_next_episode,
+                     get_seasons_by_serial_id, get_serial_by_id,
+                     get_serial_by_search_key, get_serials_by_namepart,
                      get_serials_rating, insert_episode_view_record,
                      insert_new_user)
 
@@ -193,6 +195,14 @@ async def handle_search_command(update, context):
     with context.application.database.session() as db:
         serials, num_lines = get_serials_by_namepart(
             db, namepart, page_length, page)
+        if not serials:
+            await update.effective_chat.send_message(
+                'По вашему запросу ничего не найдено в нашем каталоге. '
+                'Попробуйте найти сериал на kinopoisk.ru или imdb.com и '
+                'пришлите нам ссылку на его страницу. Мы постараемся '
+                'добавить его при наличии технической возможности.'
+            )
+            return
         text, markup = format_search_message(
             search_text, serials, num_lines, page, page_length)
     await update.effective_chat.send_message(
@@ -248,3 +258,34 @@ async def handle_text_callback(update, context):
 
 async def handle_unknown_callback(update, context):
     await update.callback_query.answer()
+
+
+async def handle_urls(update, context):
+    search = re.search(r'(imdb\.com|kinopoisk\.ru)/[^/]+/([^/]+)', update.message.text)
+    if not search:
+        await update.effective_chat.send_message(
+            'Ваша ссылка нераспознана. '
+            'Попробуйте найти сериал на kinopoisk.ru или imdb.com и '
+            'пришлите нам ссылку на его страницу. Мы постараемся '
+            'добавить его при наличии технической возможности.'
+        )
+        return
+    search_key = 'imdb' if search.group(1) == 'imdb.com' else 'kp_id'
+    search_value = search.group(2)
+    with context.application.database.session() as db:
+        try:
+            serial = get_serial_by_search_key(db, search_key, search_value)
+        except NoResultFound:
+            user_id = update.effective_sender.id
+            create_new_movie_request(db, user_id, update.message.text,
+                                    **{search_key: search_value})
+            web_url = re.sub(r'(imdb\.com|kinopoisk\.ru)', 'kinospisok.ru', 
+                                update.message.text)
+            await update.effective_chat.send_message(
+                'В нашем каталоге такого контента пока нет.\n'
+                'Пока мы работаем над его добавлением, попробуйте посмотреть '
+                f'его на этом ресурсе: {web_url}')
+            return
+    text, markup = format_details_message(serial)
+    await update.effective_chat.send_message(
+        text=text, parse_mode='HTML', reply_markup=markup, )

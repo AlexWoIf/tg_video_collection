@@ -17,7 +17,8 @@ from basic_handlers import (handle_alphabet_callback, handle_alphabet_command,
                             handle_rating_command, handle_search_callback,
                             handle_search_command, handle_search_text,
                             handle_seasons_callback, handle_start_command,
-                            handle_text_callback, handle_unknown_callback)
+                            handle_text_callback, handle_unknown_callback,
+                            handle_urls)
 from config import Config
 from db import Database
 
@@ -86,6 +87,9 @@ def main():
             CommandHandler('rating', handle_rating_command),
             CommandHandler('alphabet', handle_alphabet_command),
             CommandHandler('search', handle_search_command),
+            MessageHandler(
+                filters.TEXT & (~filters.COMMAND) & (filters.Entity("url") | 
+                filters.Entity("text_link")), handle_urls),
             MessageHandler(
                 filters.TEXT & (~filters.COMMAND) & (~filters.Entity("url"))
                 & (~filters.Entity("text_link")), handle_search_text, ),

@@ -1,6 +1,8 @@
+import logging
 from datetime import datetime
 
 from sqlalchemy import and_, case, distinct, func, or_
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models import *
@@ -16,14 +18,14 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     subquery = db.query(
         EpisodeViewRecord.user_id,
         EpisodeViewRecord.episode_id,
-        EpisodeViewRecord.updated_at,
+        EpisodeViewRecord.created_at,
         Serial.id.label('serial_id'),
         Serial.name_rus,
         Serial.name_eng,
         # Вычисляем предыдущий serial_id с помощью LAG
         func.lag(Serial.id).over(
             partition_by=EpisodeViewRecord.user_id,
-            order_by=EpisodeViewRecord.updated_at
+            order_by=EpisodeViewRecord.created_at
         ).label('prev_serial_id')
     ).join(Episode, EpisodeViewRecord.episode_id == Episode.id) \
      .join(Serial, Episode.serial_id == Serial.id) \
@@ -35,7 +37,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
     cte_query = db.query(
         subquery.c.user_id,
         subquery.c.episode_id,
-        subquery.c.updated_at,
+        subquery.c.created_at,
         subquery.c.serial_id,
         subquery.c.name_rus,
         subquery.c.name_eng,
@@ -48,7 +50,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
             )
         ).over(
             partition_by=subquery.c.user_id,
-            order_by=subquery.c.updated_at
+            order_by=subquery.c.created_at
         ).label('group_number')
     ).subquery()
 
@@ -62,7 +64,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
         cte_query.c.user_id,
         cte_query.c.serial_id,
         cte_query.c.group_number
-    ).order_by(func.max(cte_query.c.updated_at).desc())
+    ).order_by(func.max(cte_query.c.created_at).desc())
 
     return query.limit(limit).offset(offset).all(), query.count()
 
@@ -115,6 +117,22 @@ def get_serials_by_namepart(db: Session, name_part: str, limit=10, page=1):
     return query.limit(limit).offset(offset).all(), query.count()
 
 
+def get_serial_by_search_key(db: Session, search_key: str, search_value: str):
+    filter_condition = getattr(Serial, search_key) == search_value
+    return db.query(
+        Serial.id,
+        Serial.name_rus,
+        Serial.name_eng,
+        Serial.creators,
+        Serial.studio,
+        Serial.format,
+        Serial.actors,
+        Serial.descr,
+        Serial.imdb,
+        Serial.kp_id,
+    ).filter(filter_condition).one()
+
+
 def get_seasons_by_serial_id(db: Session, serial_id: int):
         return db.query(
         Episode.season,
@@ -134,7 +152,7 @@ def get_episodes_by_serial_id(
           offset: int = 0, ):
     subquery = db.query(
         EpisodeViewRecord.episode_id,
-        func.count(EpisodeViewRecord.updated_at).label('views')
+        func.count(EpisodeViewRecord.created_at).label('views')
     ).filter(EpisodeViewRecord.user_id==user_id) \
      .group_by(EpisodeViewRecord.episode_id) \
      .subquery()
@@ -221,7 +239,7 @@ def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
         EpisodeViewRecord(
             user_id=user_id,
             episode_id=episode_id,
-            updated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         )
     )
 
@@ -237,3 +255,26 @@ def insert_new_user(db: Session, user):
             is_bot=user.is_bot,
         )
     )
+
+
+def create_new_movie_request(db: Session, user_id: int, url: str, 
+                             kp_id: str = '', imdb: str = ''):
+    try:
+        movie_request = RequestedNewMovie(
+            user_id=user_id,
+            url=url,
+            kp_id=kp_id,
+            imdb=imdb,
+            created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        )
+        
+        db.add(movie_request)
+        db.commit()
+        db.refresh(movie_request)
+        
+        return movie_request
+        
+    except SQLAlchemyError as e:
+        db.rollback()
+        logging.error(f"Ошибка при сохранении запроса: {e}")
+        return None

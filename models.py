@@ -18,6 +18,7 @@ class User(Base):
     is_bot = Column(Boolean, nullable=False, default=False)
 
     view_requests = relationship('EpisodeViewRecord', back_populates='user')
+    new_movie_requests = relationship('RequestedNewMovie', back_populates='user')
 
     def __repr__(self):
         return f'<User(id={self.id}, username="{self.username}")>'
@@ -115,3 +116,19 @@ class EpisodeViewRecord (Base):
 
     def __repr__(self):
         return f'<EpisodeViewRecord(user_id={self.user_id}, episode_id={self.episode_id})>'  # noqa: E501
+
+
+class RequestedNewMovie(Base):
+    __tablename__ = 'requested_new_movie'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    url = Column(String(255), nullable=False, default='')
+    kp_id = Column(String(10), nullable=False, default='')
+    imdb = Column(String(10), nullable=False, default='')
+    created_at = Column(String(26), nullable=False)
+
+    user = relationship('User', back_populates='new_movie_requests')
+
+    def __repr__(self):
+        return f"<RequestedNewMovie(id={self.id}, user_id={self.user_id}, url='{self.url}')>"  # noqa: E501

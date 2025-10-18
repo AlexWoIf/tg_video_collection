@@ -104,12 +104,12 @@ class File(Base):
 class EpisodeViewRecord (Base):
     __tablename__ = 'episode_view_records'
     __table_args__ = (
-        PrimaryKeyConstraint('user_id', 'episode_id', 'updated_at'),
+        PrimaryKeyConstraint('user_id', 'episode_id', 'created_at'),
     )
 
     user_id = Column(BigInteger, ForeignKey('users.id'), nullable=True)
     episode_id = Column(BigInteger, ForeignKey('episodes.id'), nullable=True)
-    updated_at = Column(String(26), nullable=False)
+    created_at = Column(String(26), nullable=False)
 
     user = relationship('User', back_populates='view_requests')
     episode = relationship('Episode', back_populates='view_requests')

@@ -163,7 +163,7 @@ def get_default_episode_markup(episode, episodes, next_episode):
                 '👉 Следующий эпизод',
                 callback_data=f'play_{next_episode.id}_{next_episode.file_id}',
             )
-        ] if next_episode.id else []
+        ] if next_episode else []
     ]
     keyboard += [
             [InlineKeyboardButton(

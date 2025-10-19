@@ -8,15 +8,15 @@ from helpers import get_search_text
 from messages import (format_alphabet_message, format_details_message,
                       format_episodes_message, format_help_message,
                       format_history_message, format_play_message,
-                      format_rating_message, format_search_message,
-                      format_seasons_message)
+                      format_random_serials_message, format_rating_message,
+                      format_search_message, format_seasons_message)
 from queries import (create_new_movie_request, get_aggregated_view_history,
                      get_alphabet_counts, get_episode_by_id,
                      get_episodes_by_serial_id, get_next_episode,
-                     get_seasons_by_serial_id, get_serial_by_id,
-                     get_serial_by_search_key, get_serials_by_namepart,
-                     get_serials_rating, insert_episode_view_record,
-                     insert_new_user)
+                     get_random_serials, get_seasons_by_serial_id,
+                     get_serial_by_id, get_serial_by_search_key,
+                     get_serials_by_namepart, get_serials_rating,
+                     insert_episode_view_record, insert_new_user)
 
 POSTERS_URL = "https://alexwolf.ru/ksb/covers/{}.jpg"
 
@@ -237,6 +237,13 @@ async def handle_seasons_callback(update, context):
         reply_markup=markup,
     )
     await handle_delete_callback(update, context)
+
+
+async def handle_serial_command(update, context):
+    with context.application.database.session() as db:
+        serials = get_random_serials(db, )
+    text, markup = format_random_serials_message(serials)
+    await update.effective_chat.send_message(text=text, reply_markup=markup, )
 
 
 async def handle_start_command(update, context):

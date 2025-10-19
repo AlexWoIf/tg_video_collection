@@ -88,6 +88,14 @@ def format_play_message(bot_name, files, file_id, next_episode_id):
     return text, markup, episode
 
 
+def format_random_serials_message(serials, ):
+    text=('10 случайных сериалов]":')
+    buttons = [get_button_text_for_serial(serial, counter=False)
+               for serial in serials]
+    markup = get_paginated_markup(buttons, 'random', )
+    return text, markup
+
+
 def format_rating_message(serials, total_lines, page, page_length):
     total_pages = total_lines // page_length
     total_pages += 1 if total_lines % page_length else 0

@@ -87,6 +87,14 @@ def get_alphabet_counts(db, language):
     return result
 
 
+def get_random_serials(db, limit=10):
+    return db.query(
+        Serial.name_rus,
+        Serial.name_eng,
+        Serial.id,
+    ).order_by(func.rand()).limit(limit).all()
+
+
 def get_serial_by_id(db: Session, serial_id: int):
     return db.query(
         Serial.id,

@@ -62,22 +62,23 @@ async def error_handler(update, context):
             parse_mode=ParseMode.HTML)
 
 
+async def log_update(update: Update, _):
+    logger = logging.getLogger(__name__)
+    logger.info(f"📨 Processing update: {update.update_id}")
+    logger.info(f"📊 Update content: {update.to_dict()}")
+    # Логируем тип обновления
+    if update.message:
+        logger.info(f"💬 Message type: {update.message.text}")
+    if update.callback_query:
+        logger.info(f"🔘 Callback data: {update.callback_query.data}")
+
+
 def main():
     """Run the bot."""
     app_config = Config()
     logging.getLogger().setLevel(
         logging.DEBUG if app_config.parameters['debug'] else logging.INFO
     )
-
-    # persistence = PicklePersistence(filepath='persistence.pickle')
-    # Для включения добавить в инициализацию    .persistence(persistence)
-    application = Application.builder() \
-                    .token(app_config.tg_bot_token) \
-                    .base_url(app_config.tg_base_url) \
-                    .build()
-
-    application.database = Database(app_config.db_url, )
-    application.parameters = app_config.parameters
 
     conversation_handler = ConversationHandler(
         entry_points=[
@@ -112,6 +113,19 @@ def main():
         name='main_conversation',
         persistent=False,
     )
+
+    # persistence = PicklePersistence(filepath='persistence.pickle')
+    # Для включения добавить в инициализацию    .persistence(persistence)
+    application = Application.builder() \
+                    .token(app_config.tg_bot_token) \
+                    .base_url(app_config.tg_base_url) \
+                    .build()
+
+    application.database = Database(app_config.db_url, )
+    application.parameters = app_config.parameters
+
+    application.add_handler(MessageHandler(filters.ALL, log_update), group=-1)
+    application.add_handler(CallbackQueryHandler(log_update), group=-1)
 
     application.add_handler(conversation_handler)
     application.add_error_handler(error_handler)

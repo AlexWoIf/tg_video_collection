@@ -182,6 +182,7 @@ def get_episode_by_id(db: Session, episode_id: int, ):
     Episode.episode,
     Episode.name,
     File.id.label('file_id'),
+    File.file_id.label('tg_file_id'),
     File.width,
     File.height,
     Audio.name.label('audio'),

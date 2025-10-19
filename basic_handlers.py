@@ -139,7 +139,7 @@ async def handle_play_callback(update, context):
             photo=POSTERS_URL.format(current_file.serial_id), **kwargs)
     else:
         await update.effective_chat.send_video(
-            video=current_file.file_id, **kwargs)
+            video=current_file.tg_file_id, **kwargs)
     await handle_delete_callback(update, context)
 
 

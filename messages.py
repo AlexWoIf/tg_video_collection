@@ -12,7 +12,7 @@ from helpers import (
 
 
 def format_alphabet_message(letters):
-    text = 'Выбарите начальную букву сериала.\n' \
+    text = 'Выберите начальную букву сериала.\n' \
            'В квадратных скобках указано количество сериалов.\n'
     markup = get_alphabet_markup(letters)
     return text, markup
@@ -89,7 +89,7 @@ def format_play_message(bot_name, files, file_id, next_episode_id):
 
 
 def format_random_serials_message(serials, ):
-    text=('10 случайных сериалов]":')
+    text=('10 случайных сериалов:')
     buttons = [get_button_text_for_serial(serial, counter=False)
                for serial in serials]
     markup = get_paginated_markup(buttons, 'random', )

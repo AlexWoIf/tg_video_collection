@@ -64,7 +64,7 @@ class Episode(Base):
 
     id = Column(BigInteger, primary_key=True, nullable=False, 
                 autoincrement=True)
-    serial_id = Column(BigInteger, ForeignKey('serials.id'), default=0)
+    serial_id = Column(BigInteger, ForeignKey('serials.id'), nullable=False)
     season = Column(Integer, nullable=False, default=0)
     episode = Column(Integer, nullable=False, default=0)
     name = Column(Text, nullable=False, default='')

@@ -52,7 +52,7 @@ def get_button_text_for_serial(serial, max_length=40, counter=True):
     else:
         name_rus, name_eng, serial_id = serial
         counter_part = ''
-    name_part = f'{name_rus}({name_eng})'
+    name_part = f'{name_rus} ({name_eng})'
     if len(name_part) > (max_length - len(counter_part)):
         name_part = f'{name_part[:max_length - len(counter_part) - 3]}...'
 

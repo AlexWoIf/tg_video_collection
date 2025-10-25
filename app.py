@@ -68,7 +68,7 @@ async def log_update(update: Update, _):
     logger.info(f"📊 Update content: {update.to_dict()}")
     # Логируем тип обновления
     if update.message:
-        logger.info(f"💬 Message type: {update.message.text}")
+        logger.info(f"💬 Message text: {update.message.text}")
     if update.callback_query:
         logger.info(f"🔘 Callback data: {update.callback_query.data}")
 

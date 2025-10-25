@@ -50,6 +50,16 @@ async def handle_delete_callback(update, context):
 async def handle_details_callback(update, context):
     callback_query = update.callback_query
     _, serial_id = callback_query.data.split('_')
+    context.args = [serial_id,]
+    await handle_details_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_details_command(update, context):
+    serial_id = context.args and context.args[0].isdigit() and int(context.args[0]) # noqa E501
+    if not serial_id:
+        await handle_help_command(update, context)
+        return
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
@@ -60,7 +70,6 @@ async def handle_details_callback(update, context):
     text, markup = format_details_message(serial)
     await update.effective_chat.send_message(
         text=text, parse_mode='HTML', reply_markup=markup, )
-    await handle_delete_callback(update, context)
 
 
 async def handle_episodes_callback(update, context):
@@ -250,8 +259,9 @@ async def handle_start_command(update, context):
     with context.application.database.session() as db:
         insert_new_user(db, update.effective_sender)
     if not context.args:
-        reply_text=format_help_message()
-        await update.message.reply_text(reply_text)
+        await handle_help_command(update, context)
+        return
+    await handle_details_command(update, context)
 
 
 async def handle_text_callback(update, context):

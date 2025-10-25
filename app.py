@@ -11,14 +11,15 @@ from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
 
 from basic_handlers import (handle_alphabet_callback, handle_alphabet_command,
                             handle_delete_callback, handle_details_callback,
-                            handle_episodes_callback, handle_help_command,
-                            handle_history_callback, handle_history_command,
-                            handle_play_callback, handle_rating_callback,
-                            handle_rating_command, handle_search_callback,
-                            handle_search_command, handle_search_text,
-                            handle_seasons_callback, handle_serial_command,
-                            handle_start_command, handle_text_callback,
-                            handle_unknown_callback, handle_urls)
+                            handle_details_command, handle_episodes_callback,
+                            handle_help_command, handle_history_callback,
+                            handle_history_command, handle_play_callback,
+                            handle_rating_callback, handle_rating_command,
+                            handle_search_callback, handle_search_command,
+                            handle_search_text, handle_seasons_callback,
+                            handle_serial_command, handle_start_command,
+                            handle_text_callback, handle_unknown_callback,
+                            handle_urls)
 from config import Config
 from db import Database
 
@@ -83,10 +84,11 @@ def main():
     conversation_handler = ConversationHandler(
         entry_points=[
             CommandHandler('start', handle_start_command),
+            CommandHandler('alphabet', handle_alphabet_command),
+            CommandHandler('details', handle_details_command),
             CommandHandler('help', handle_help_command),
             CommandHandler('history', handle_history_command),
             CommandHandler('rating', handle_rating_command),
-            CommandHandler('alphabet', handle_alphabet_command),
             CommandHandler('search', handle_search_command),
             CommandHandler('serial', handle_serial_command),
             MessageHandler(

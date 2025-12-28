@@ -195,7 +195,7 @@ def get_episode_by_id(db: Session, episode_id: int, ):
     File.width,
     File.height,
     Audio.name.label('audio'),
-    Poster.file_id,
+    Poster.file_id.label('poster_file_id'),
 ).join(
     Episode, Episode.serial_id==Serial.id, isouter=True,
 ).join(

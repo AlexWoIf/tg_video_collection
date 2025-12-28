@@ -142,7 +142,8 @@ async def handle_play_callback(update, context):
         context.bot.username, files, int(file_id), next_episode, )
     kwargs = {'parse_mode': 'HTML', 'caption': text, 'reply_markup': markup, }
     if context.application.parameters.get('debug', False):
-        await update.effective_chat.send_photo(photo=serial.file_id, **kwargs)
+        await update.effective_chat.send_photo(photo=serial.poster_file_id, 
+                                               **kwargs)
     else:
         await update.effective_chat.send_video(
             video=current_file.tg_file_id, **kwargs)

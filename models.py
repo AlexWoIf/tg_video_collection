@@ -35,10 +35,14 @@ class Serial(Base):
     format = Column(Text, nullable=False, default='')
     actors = Column(Text, nullable=False, default='')
     descr = Column(Text, nullable=False, default='')
+    poster_id = Column(Integer, ForeignKey('posters.id'), nullable=True)
     imdb = Column(String(10), nullable=False, default='')
     kp_id = Column(String(10), nullable=False, default='')
 
     episodes = relationship('Episode', back_populates='serial')
+    posters = relationship('Poster', back_populates='serial', 
+                         foreign_keys='Poster.serial_id')
+    default_poster = relationship('Poster', foreign_keys=[poster_id])
 
     def __repr__(self):
         return f'<Serial(id={self.id}, name_rus="{self.name_rus}")>'
@@ -68,21 +72,46 @@ class Episode(Base):
     season = Column(Integer, nullable=False, default=0)
     episode = Column(Integer, nullable=False, default=0)
     name = Column(Text, nullable=False, default='')
-    file_id = Column(Integer, ForeignKey('episodes.id'), nullable=True)
+    file_id = Column(Integer, ForeignKey('files.id'), nullable=True)
 
     serial = relationship('Serial', back_populates='episodes')
-    files = relationship('File', back_populates='episode')
+    files = relationship('File', back_populates='episode', 
+                         foreign_keys='File.episode_id')
+    default_file = relationship('File', foreign_keys=[file_id])
     view_requests = relationship('EpisodeViewRecord', back_populates='episode')
 
     def __repr__(self):
         return f'<Episode(id={self.id}, serial_id={self.serial_id})>'
 
 
+class Poster(Base):
+    __tablename__ = 'posters'
+    __table_args__ = (
+        UniqueConstraint('file_id', name='uq_poster_file_id'),
+        Index('ix_poster_file_id', 'file_id'),
+        Index('ix_poster_serial_id', 'serial_id'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    serial_id = Column(BigInteger, ForeignKey('serials.id'), nullable=False)
+    file_id = Column(String(255), nullable=False)  # Уникальный идентификатор файла
+    width = Column(SmallInteger, nullable=False, default=0)
+    height = Column(SmallInteger, nullable=False, default=0)
+    
+    serial = relationship('Serial', back_populates='posters',
+                           foreign_keys=[serial_id])
+    
+    def __repr__(self):
+        return f'<Poster(id={self.id}, episode_id={self.serial_id},' \
+               f' file_id="{self.file_id}")>'
+    
+
 class File(Base):
     __tablename__ = 'files'
     __table_args__ = (
         UniqueConstraint('file_id', name='uq_file_id'),
         Index('ix_file_id', 'file_id'),
+        Index('ix_file_episode_id', 'episode_id'),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -94,11 +123,13 @@ class File(Base):
     audio_id = Column(Integer, ForeignKey('sounds.id'), nullable=False, 
                       default=0)
 
-    episode = relationship('Episode', back_populates='files')
+    episode = relationship('Episode', back_populates='files',
+                           foreign_keys=[episode_id])
     audio = relationship('Audio', back_populates='files')
 
     def __repr__(self):
-        return f'<File(episode_id={self.episode_id}, file_id="{self.file_id}")>'  # noqa: E501
+        return f'<File(id={self.id}, episode_id={self.episode_id}, ' \
+               f'file_id="{self.file_id}")>'
 
 
 class EpisodeViewRecord (Base):

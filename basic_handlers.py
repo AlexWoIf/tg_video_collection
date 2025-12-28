@@ -18,8 +18,6 @@ from queries import (create_new_movie_request, get_aggregated_view_history,
                      get_serials_by_namepart, get_serials_rating,
                      insert_episode_view_record, insert_new_user)
 
-POSTERS_URL = "https://alexwolf.ru/ksb/covers/{}.jpg"
-
 
 async def handle_alphabet_callback(update, context):
     callback_query = update.callback_query
@@ -91,7 +89,7 @@ async def handle_episodes_callback(update, context):
     text, markup = format_episodes_message(
         serial, season, episodes, total_lines, current_page, page_length)
     await update.effective_chat.send_photo(
-        photo = POSTERS_URL.format(serial_id),
+        photo=serial.file_id,
         parse_mode='HTML',
         caption=text,
         reply_markup=markup,
@@ -144,8 +142,7 @@ async def handle_play_callback(update, context):
         context.bot.username, files, int(file_id), next_episode, )
     kwargs = {'parse_mode': 'HTML', 'caption': text, 'reply_markup': markup, }
     if context.application.parameters.get('debug', False):
-        await update.effective_chat.send_photo(
-            photo=POSTERS_URL.format(current_file.serial_id), **kwargs)
+        await update.effective_chat.send_photo(photo=serial.file_id, **kwargs)
     else:
         await update.effective_chat.send_video(
             video=current_file.tg_file_id, **kwargs)
@@ -240,7 +237,7 @@ async def handle_seasons_callback(update, context):
             raise
     text, markup = format_seasons_message(serial, seasons)
     await update.effective_chat.send_photo(
-        photo=POSTERS_URL.format(serial_id),
+        photo=serial.file_id,
         parse_mode='HTML',
         caption=text,
         reply_markup=markup,

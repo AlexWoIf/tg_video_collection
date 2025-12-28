@@ -106,8 +106,9 @@ def get_serial_by_id(db: Session, serial_id: int):
         Serial.actors,
         Serial.descr,
         Serial.imdb,
-        Serial.kp_id
-    ).filter(Serial.id == serial_id).one()
+        Serial.kp_id,
+        Poster.file_id,
+    ).filter(Serial.id == serial_id, Serial.poster_id == Poster.id).one()
 
 
 def get_serials_by_namepart(db: Session, name_part: str, limit=10, page=1):
@@ -194,13 +195,14 @@ def get_episode_by_id(db: Session, episode_id: int, ):
     File.width,
     File.height,
     Audio.name.label('audio'),
+    Poster.file_id,
 ).join(
     Episode, Episode.serial_id==Serial.id, isouter=True,
 ).join(
     File, File.episode_id==Episode.id, isouter=True,
 ).join(
     Audio, Audio.id==File.audio_id, isouter=True,
-).filter(Episode.id==episode_id).all()
+).filter(Episode.id==episode_id, Serial.poster_id==Poster.id).all()
 
 
 def get_next_episode(db: Session, current_episode):

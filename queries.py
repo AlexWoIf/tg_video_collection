@@ -174,7 +174,8 @@ def get_episodes_by_serial_id(
         Episode.file_id,
         subquery.c.views
     ).join(subquery, subquery.c.episode_id==Episode.id, isouter=True, ) \
-     .filter(Episode.serial_id==serial_id, Episode.season==season, ) \
+     .filter(Episode.serial_id==serial_id, Episode.season==season, 
+             Episode.file_id.is_not(None)) \
      .group_by(Episode.id, Episode.episode, ) \
      .order_by(Episode.episode)
 

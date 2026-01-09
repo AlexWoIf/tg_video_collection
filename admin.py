@@ -1,14 +1,10 @@
-import logging
-import re
-
 from collections import defaultdict
-
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-from telegram import error as tg_error
 
 from helpers import format_numeric
 from kinopoiskapiunofficial import KinopoiskApi
-from queries import get_episodes_by_serial_id, insert_new_episode
+from queries import (get_episodes_by_serial_id, get_serial_by_id,
+                     insert_new_episode)
+
 
 async def handle_add_command(update, context):
     args = context.args
@@ -27,12 +23,13 @@ async def handle_update_command(update, context):
 
     with context.application.database.session() as db:
         my_episodes = get_episodes_by_serial_id(db, serial_id)
+        serial = get_serial_by_id(db, serial_id)
     my_seasons = defaultdict(lambda: defaultdict(list))
     for episode in my_episodes:
         my_seasons[episode.season][episode.episode] = episode.name, episode.id
 
     api = KinopoiskApi(context.application.parameters.get('kp_api_key'))
-    kp_id = my_episodes[0].kp_id
+    kp_id = serial.kp_id
     kp_episodes = await api.get_seasons_info(kp_id)
     added = 0
     text = ''
@@ -48,7 +45,14 @@ async def handle_update_command(update, context):
                 name = f'{name_rus} ({name})'
             with context.application.database.session() as db:
                 insert_new_episode(db, serial_id, season_number, episode_number, name)
-            text += f'Добавили [{season_number}x{episode_number}] {name}\n'
+            text += f'Эпизод [{season_number}x{episode_number}] {name}\n'
             added += 1
-    await update.effective_chat.send_message(
-        f'{text}Добавили {format_numeric(added, 'эпизод')}')
+    text += f'Добавили {format_numeric(added, 'эпизод')}'
+    while True:
+        if len(text) > 4095:
+            index = text.rfind('\n', 0, 4096)
+            await update.effective_chat.send_message(text[:index])
+            text = text[index+1:]
+        else:
+            await update.effective_chat.send_message(text)
+            break

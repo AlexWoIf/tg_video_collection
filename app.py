@@ -9,6 +9,7 @@ from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           ConversationHandler, MessageHandler,
                           PicklePersistence, filters)
 
+from admin import handle_add_command, handle_update_command
 from basic_handlers import (handle_alphabet_callback, handle_alphabet_command,
                             handle_delete_callback, handle_details_callback,
                             handle_details_command, handle_episodes_callback,
@@ -91,6 +92,10 @@ def main():
             CommandHandler('rating', handle_rating_command),
             CommandHandler('search', handle_search_command),
             CommandHandler('serial', handle_serial_command),
+            CommandHandler('add', handle_add_command,
+                filters.Chat(app_config.parameters.get('storage_chat_id')),),
+            CommandHandler('update', handle_update_command,
+                filters.Chat(app_config.parameters.get('storage_chat_id')),),
             MessageHandler(
                 filters.TEXT & (~filters.COMMAND) & (filters.Entity("url") | 
                 filters.Entity("text_link")), handle_urls),

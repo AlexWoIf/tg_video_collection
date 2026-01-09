@@ -22,8 +22,9 @@ class Config():
 
         self.parameters = {
             'debug': os.getenv('DEBUG', 'False').lower() == 'true',
-            'storage_chat_id': os.getenv('STORAGE_CHAT_ID', ''),
+            'storage_chat_id': int(os.getenv('STORAGE_CHAT_ID', )),
             'page_length': int(os.getenv('MAX_PAGE_LENGTH', '10')),
+            'kp_api_key': os.getenv('KINOPOISK_API_KEY', ''),
         }
 
         # TODO: use pydantic instead

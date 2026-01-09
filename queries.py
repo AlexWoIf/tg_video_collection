@@ -152,7 +152,19 @@ def get_seasons_by_serial_id(db: Session, serial_id: int):
      .all()
 
 
-def get_episodes_by_serial_id(
+def get_episodes_by_serial_id(db: Session, serial_id: int, ):
+
+    return db.query(
+        Episode.season,
+        Episode.episode,
+        Episode.name,
+        Episode.id,
+        Serial.kp_id,
+    ).outerjoin(Serial, Episode.serial_id == Serial.id)\
+     .filter(Episode.serial_id==serial_id, ).all()
+
+
+def get_episodes_by_serial_and_season(
           db: Session,
           serial_id: int,
           season: int,
@@ -252,6 +264,18 @@ def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
             user_id=user_id,
             episode_id=episode_id,
             created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        )
+    )
+
+
+def insert_new_episode(db: Session, serial_id: int, season: int , 
+                       episode: int, name: str):
+    db.add(
+        Episode(
+            serial_id=serial_id,
+            season=season,
+            episode=episode,
+            name=name,
         )
     )
 

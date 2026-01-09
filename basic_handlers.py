@@ -12,7 +12,7 @@ from messages import (format_alphabet_message, format_details_message,
                       format_search_message, format_seasons_message)
 from queries import (create_new_movie_request, get_aggregated_view_history,
                      get_alphabet_counts, get_episode_by_id,
-                     get_episodes_by_serial_id, get_next_episode,
+                     get_episodes_by_serial_and_season, get_next_episode,
                      get_random_serials, get_seasons_by_serial_id,
                      get_serial_by_id, get_serial_by_search_key,
                      get_serials_by_namepart, get_serials_rating,
@@ -42,7 +42,7 @@ async def handle_delete_callback(update, context):
     except tg_error.BadRequest:
         logging.error('Delete: BadRequest')
         await update.callback_query.answer(
-            'Старые сообщения не могут быть удалены')
+            'Старые сообщения не могут быть удалены ботом')
 
 
 async def handle_details_callback(update, context):
@@ -79,7 +79,7 @@ async def handle_episodes_callback(update, context):
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
-            episodes, total_lines = get_episodes_by_serial_id(
+            episodes, total_lines = get_episodes_by_serial_and_season(
                 db, serial_id, season, user_id, page_length,
                 (current_page - 1) * page_length
             )

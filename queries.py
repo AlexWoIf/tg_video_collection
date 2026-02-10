@@ -191,7 +191,18 @@ def get_episodes_by_serial_and_season(
      .group_by(Episode.id, Episode.episode, ) \
      .order_by(Episode.episode)
 
-    return query.limit(limit).offset(offset).all(), query.count()
+    all_episodes = query.all()
+    total_count = len(all_episodes)
+    
+    if offset >= 0 or total_count == 0:
+        return all_episodes[offset:offset+limit], total_count
+    for idx, episode in enumerate(all_episodes):
+        if episode.views is None: # views берется из подзапроса
+            offset = (idx // limit) * limit
+            break
+    else:
+        offset = ((total_count - 1) // limit) * limit
+    return all_episodes[offset:offset+limit], total_count
 
 
 def get_episode_by_id(db: Session, episode_id: int, ):

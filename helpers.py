@@ -129,7 +129,7 @@ def get_seasons_markup(serial_id, seasons):
         keyboard.append(
             [InlineKeyboardButton(
                 text=f'Сезон {season}[{episodes}]',
-                callback_data=f'episodes_{serial_id}_{season}_1')
+                callback_data=f'episodes_{serial_id}_{season}_0')
             for season, episodes in seasons[i:i+2]]
         )
     keyboard.append([
@@ -174,7 +174,7 @@ def get_default_episode_markup(episode, episodes, next_episode):
         [
             InlineKeyboardButton(
                 LISTEPISODES,
-                callback_data = f'episodes_{episode.serial_id}_{episode.season}_1' # noqa E501
+                callback_data = f'episodes_{episode.serial_id}_{episode.season}_0' # noqa E501
             ),
         ],
         [

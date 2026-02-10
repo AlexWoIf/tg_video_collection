@@ -258,6 +258,47 @@ def get_serials_rating(db: Session, limit=10, page=1):
     return query.limit(limit).offset(offset).all(), query.count()
 
 
+
+def insert_kp_episode(db: Session, episode, serial_id):
+    return db.merge(
+        KPEpisode(
+            kp_id=serial_id,
+            season=episode['seasonNumber'],
+            episode=episode['episodeNumber'],
+            name_rus=episode['nameRu'],
+            name_eng=episode['nameEn'],
+        )
+    )
+
+
+def insert_kp_serial(db: Session, serial, episodes):
+    serial_id = serial['kinopoiskId']
+    kp_serial = db.get(KPSerial, serial_id)
+    if kp_serial:
+        db.delete(kp_serial)
+    new_kp_serial = KPSerial(
+            kp_id=serial_id,
+            name_rus=serial['nameRu'],
+            name_eng=serial['nameOriginal'] or serial['nameEn'] or '',
+            descr=serial['description'],
+            poster=serial['posterUrlPreview'],
+            imdb=serial['imdbId'],
+        )
+    for season in episodes.get('items', []):
+        for episode in season['episodes']:
+            # logging.error(episode)
+            new_kp_serial.episodes.append(
+                KPEpisode(
+                    season=episode['seasonNumber'],
+                    episode=episode['episodeNumber'],
+                    name_rus=episode['nameRu'] or '',
+                    name_eng=episode['nameEn'] or '',
+                )
+            )
+
+    db.add(new_kp_serial)
+
+
 def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
     db.add(
         EpisodeViewRecord(

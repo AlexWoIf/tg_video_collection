@@ -43,6 +43,8 @@ class Serial(Base):
     posters = relationship('Poster', back_populates='serial', 
                          foreign_keys='Poster.serial_id')
     default_poster = relationship('Poster', foreign_keys=[poster_id])
+    kp_details = relationship("KPSerial", back_populates="serial", 
+                              uselist=False)
 
     def __repr__(self):
         return f'<Serial(id={self.id}, name_rus="{self.name_rus}")>'
@@ -94,7 +96,7 @@ class Poster(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     serial_id = Column(BigInteger, ForeignKey('serials.id'), nullable=False)
-    file_id = Column(String(255), nullable=False)  # Уникальный идентификатор файла
+    file_id = Column(String(255), nullable=False)
     width = Column(SmallInteger, nullable=False, default=0)
     height = Column(SmallInteger, nullable=False, default=0)
     
@@ -163,3 +165,41 @@ class RequestedNewMovie(Base):
 
     def __repr__(self):
         return f"<RequestedNewMovie(id={self.id}, user_id={self.user_id}, url='{self.url}')>"  # noqa: E501
+
+
+class KPSerial(Base):
+    __tablename__ = 'kp_serials'
+
+    kp_id = Column(BigInteger, primary_key=True, nullable=False)
+    serial_id = Column(BigInteger, ForeignKey('serials.id'), unique=True, 
+                       nullable=True)
+    name_rus = Column(Text, nullable=False, default='')
+    name_eng = Column(Text, nullable=False, default='')
+    descr = Column(Text, nullable=False, default='')
+    poster = Column(String(255), nullable=True)
+    imdb = Column('IMDB', String(10), nullable=False, unique=True, default='')
+
+    serial = relationship("Serial", foreign_keys=[serial_id])
+    episodes = relationship("KPEpisode", back_populates="kp_serial",
+                            cascade="all, delete-orphan" )
+
+    def __repr__(self):
+        return f'<KPSerial(kp_id={self.kp_id}, name_rus="{self.name_rus}")>'
+
+
+class KPEpisode(Base):
+    __tablename__ = 'kp_episodes'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, 
+                nullable=False)
+    kp_serial_id = Column(BigInteger, ForeignKey('kp_serials.kp_id'), 
+                          nullable=False)
+    season = Column(Integer, nullable=False)
+    episode = Column(Integer, nullable=False)
+    name_rus = Column(Text, nullable=False)
+    name_eng = Column(Text, nullable=False)
+
+    kp_serial = relationship("KPSerial", back_populates="episodes")
+
+    def __repr__(self):
+        return f'<KPEpisode(id={self.id}, s={self.season}e={self.episode})>'

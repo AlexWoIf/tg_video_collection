@@ -202,7 +202,7 @@ def get_episodes_by_serial_and_season(
             break
     else:
         offset = ((total_count - 1) // limit) * limit
-    return all_episodes[offset:offset+limit], total_count
+    return all_episodes[offset:offset+limit], total_count, offset // limit + 1
 
 
 def get_episode_by_id(db: Session, episode_id: int, ):

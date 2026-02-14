@@ -79,7 +79,7 @@ async def handle_episodes_callback(update, context):
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
-            episodes, total_lines = get_episodes_by_serial_and_season(
+            episodes, total_lines, current_page = get_episodes_by_serial_and_season(
                 db, serial_id, season, user_id, page_length,
                 (current_page - 1) * page_length
             )

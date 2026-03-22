@@ -108,7 +108,9 @@ def get_serial_by_id(db: Session, serial_id: int):
         Serial.imdb,
         Serial.kp_id,
         Poster.file_id,
-    ).filter(Serial.id == serial_id, Serial.poster_id == Poster.id).one()
+    ).filter(
+        Serial.id == serial_id, Serial.poster_id == Poster.id
+    ).one_or_none()
 
 
 def get_serials_by_namepart(db: Session, name_part: str, limit=10, page=1):
@@ -143,7 +145,7 @@ def get_serial_by_search_key(db: Session, search_key: str, search_value: str):
 
 
 def get_seasons_by_serial_id(db: Session, serial_id: int):
-        return db.query(
+    return db.query(
         Episode.season,
         func.count(Episode.id).label('episode_count')
     ).filter(Episode.serial_id == serial_id) \
@@ -152,16 +154,27 @@ def get_seasons_by_serial_id(db: Session, serial_id: int):
      .all()
 
 
-def get_episodes_by_serial_id(db: Session, serial_id: int, ):
-
+def get_kp_episodes_by_serial_id(db: Session, serial_id: int, ):
     return db.query(
-        Episode.season,
-        Episode.episode,
-        Episode.name,
-        Episode.id,
-        Serial.kp_id,
-    ).outerjoin(Serial, Episode.serial_id == Serial.id)\
-     .filter(Episode.serial_id==serial_id, ).all()
+        KPEpisode.id,
+        KPEpisode.season,
+        KPEpisode.episode,
+        KPEpisode.name_rus,
+        KPEpisode.name_eng
+    ).join(Serial, Serial.kp_id == KPEpisode.kp_serial_id
+    ).outerjoin(
+        Episode,
+        (Episode.serial_id == Serial.id) &
+        (Episode.season == KPEpisode.season) &
+        (Episode.episode == KPEpisode.episode)
+    ).where(
+        Serial.id == serial_id,
+        Episode.id.is_(None),
+        KPEpisode.ignore == 0,
+    ).order_by(
+        KPEpisode.season,
+        KPEpisode.episode
+    ).all()
 
 
 def get_episodes_by_serial_and_season(
@@ -268,6 +281,16 @@ def get_serials_rating(db: Session, limit=10, page=1):
 
     return query.limit(limit).offset(offset).all(), query.count()
 
+
+def ignore_kp_episode(db: Session, kp_episode_id: int):
+    db.query(KPEpisode).filter(KPEpisode.id == kp_episode_id).update(
+        {KPEpisode.ignore: True}
+    )
+    db.commit()
+    return db.query(Serial.id).filter(
+        KPEpisode.id == kp_episode_id,
+        KPEpisode.kp_serial_id == Serial.kp_id
+    ).one_or_none()
 
 
 def insert_kp_episode(db: Session, episode, serial_id):

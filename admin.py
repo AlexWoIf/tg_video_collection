@@ -1,13 +1,12 @@
 import logging
 
-from collections import defaultdict
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from helpers import format_numeric
+from basic_handlers import handle_delete_callback
+from helpers import get_paginated_markup, format_numeric
 from kinopoiskapiunofficial import KinopoiskApi
-from queries import (get_episodes_by_serial_id, get_serial_by_id,
-                     insert_kp_episode, insert_kp_serial, )
+from queries import (get_kp_episodes_by_serial_id, get_serial_by_id, 
+                     ignore_kp_episode, insert_kp_episode, insert_kp_serial, )
 
 
 async def handle_add_command(update, context):
@@ -18,6 +17,11 @@ async def handle_add_command(update, context):
 
 
 async def handle_get_command(update, context):
+    '''
+    Get information from kinopoisk.ru and store it in database.
+    Usage format:
+    /get <kinopoisk-ID>
+    '''
     args = context.args
     kp_id = args and args[0].isdigit() and int(args[0])
     if not kp_id:
@@ -39,59 +43,90 @@ async def handle_get_command(update, context):
     )
 
 
-async def handle_update_command(update, context):
-    args = context.args
-    serial_id = args and args[0].isdigit() and int(args[0])
-    if not serial_id:
-        await update.effective_chat.send_message(
-            'Укажите корректный номер сериала в нашей базе')
-        return
-    
+async def handle_exclude_callback(update, context):
+    callback_query = update.callback_query
+    _, kp_episode, page = callback_query.data.split('_')
     with context.application.database.session() as db:
-        my_episodes = get_episodes_by_serial_id(db, serial_id)
-        serial = get_serial_by_id(db, serial_id)
-    my_seasons = defaultdict(lambda: defaultdict(list))
-    for episode in my_episodes:
-        my_seasons[episode.season][episode.episode] = episode.name, episode.id
+        serial = ignore_kp_episode(db, kp_episode)
+    context.args = [str(serial.id), page, ]
+    await handle_update_command(update, context)
+    await handle_delete_callback(update, context)
 
-    api = KinopoiskApi(context.application.parameters.get('kp_api_key'))
-    kp_id = serial.kp_id
-    kp_episodes = await api.get_seasons_info(kp_id)
-    added = 0
-    text = ''
+
+async def handle_update_callback(update, context):
+    callback_query = update.callback_query
+    _, serial_id, page = callback_query.data.split('_')
+    context.args = [serial_id, page, ]
+    await handle_update_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_update_command(update, context):
+    '''
+    Show additional episodes for serial.
+    Usage format:
+    /update <serial_id> [<page>]
+    '''
+    if update.effective_chat.id != context.application.parameters.get(
+                                                            'storage_chat_id'):
+        return
+    args = context.args + ['0']
+    serial_id = args and args[0].isdigit() and int(args[0]) or 0
+    current_page = args and args[1].isdigit() and int(args[1]) or 1
+    page_length = context.application.parameters.get('page_length')
+    offset = (current_page - 1) * page_length
+    with context.application.database.session() as db:
+        kp_episodes = get_kp_episodes_by_serial_id(db, serial_id)
+    if not kp_episodes:
+        await update.effective_chat.send_message(
+            f'Сериал с ID {serial_id} не найден, либо для него неизвестны '
+            'новые эпизоды')
+        return
+
+    total_pages = len(kp_episodes) // page_length
+    total_pages += 1 if len(kp_episodes) % page_length else 0
     keyboard = []
-    for season in kp_episodes.get('items', []):
-        for episode in season.get('episodes', []):
-            season_number = episode.get('seasonNumber')
-            episode_number = episode.get('episodeNumber')
-            if my_seasons[season_number][episode_number]:
-                continue
-            name = episode.get('nameEn', f'Episode {episode_number}')
-            name_rus = episode.get('nameRu')
-            if name_rus:
-                name = f'{name_rus} ({name})'
-            # with context.application.database.session() as db:
-            #     insert_new_episode(db, serial_id, season_number, episode_number, name)
-            # text += f'❌ [{season_number}x{episode_number}] {name}\n'
-            added += 1
-            keyboard.append(
-                [InlineKeyboardButton(
-                    text=f'❌ [{season_number}x{episode_number}] {name}',
-                    callback_data=f'exclude_{season_number}_{episode_number}')]
-            )
-    keyboard = keyboard[:90]
+    for episode in kp_episodes[offset:offset+page_length]:
+        name = f'{episode.name_rus} ({episode.name_eng})' \
+            if episode.name_rus else episode.name_eng
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f'➕[{episode.season}x{episode.episode}] {name}',
+                    callback_data=f'include_{episode.id}_{current_page}'
+                ),
+                InlineKeyboardButton(
+                    text='❌ Исключить',
+                    callback_data=f'exclude_{episode.id}_{current_page}'
+                ),
+            ]
+        )
+    if total_pages > 1:
+        list_type = f'update_{serial_id}'
+        keyboard.append([
+            InlineKeyboardButton(
+                text='1⏮️',
+                callback_data=f'{list_type}_1' if current_page>1 else '-'),
+            InlineKeyboardButton(
+                text='◀️',
+                callback_data=f'{list_type}_{current_page - 1}' 
+                                if current_page>1 else '-'),
+            InlineKeyboardButton(f'{current_page}', callback_data='-'),
+            InlineKeyboardButton(
+                text='▶️', 
+                callback_data=f'{list_type}_{current_page+1}' 
+                                if current_page<total_pages else '-'),
+            InlineKeyboardButton(
+                text=f'⏭️{total_pages}',
+                callback_data=f'{list_type}_{total_pages}' 
+                                if current_page<total_pages else '-'),
+        ])
     keyboard.append([
-            InlineKeyboardButton(text='✅ Добавить все', callback_data='add_'),
-            InlineKeyboardButton(text='❌ Удалить все', callback_data='delete_'),
+            InlineKeyboardButton(text='✅ Добавить все', 
+                                 callback_data='include_'),
+            InlineKeyboardButton(text='❌ Удалить меню', 
+                                 callback_data='delete_'),
     ])
-    text = f'Можем добавить {format_numeric(added, 'эпизод')}\n'
+    text = f'Можем добавить {format_numeric(len(kp_episodes), 'эпизод')}\n'
     await update.effective_chat.send_message(text, 
         reply_markup=InlineKeyboardMarkup(keyboard))
-    # while True:
-    #     if len(text) > 4095:
-    #         index = text.rfind('\n', 0, 4096)
-    #         await update.effective_chat.send_message(text[:index])
-    #         text = text[index+1:]
-    #     else:
-    #         await update.effective_chat.send_message(text)
-    #         break

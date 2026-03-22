@@ -198,6 +198,7 @@ class KPEpisode(Base):
     episode = Column(Integer, nullable=False)
     name_rus = Column(Text, nullable=False)
     name_eng = Column(Text, nullable=False)
+    ignore = Column(Boolean, nullable=False, default=False)
 
     kp_serial = relationship("KPSerial", back_populates="episodes")
 

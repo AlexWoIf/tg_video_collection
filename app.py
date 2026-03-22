@@ -9,7 +9,9 @@ from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           ConversationHandler, MessageHandler,
                           PicklePersistence, filters)
 
-from admin import handle_add_command, handle_get_command, handle_update_command
+from admin import (handle_add_command, handle_exclude_callback,
+                   handle_get_command, handle_update_callback,
+                   handle_update_command)
 from basic_handlers import (handle_alphabet_callback, handle_alphabet_command,
                             handle_delete_callback, handle_details_callback,
                             handle_details_command, handle_episodes_callback,
@@ -54,7 +56,7 @@ async def error_handler(update, context):
         f'<pre>context.bot_data = {html.escape(str(context.bot_data))}</pre>\n\n', # noqa: E501
         f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n', # noqa: E501
         f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n', # noqa: E501
-        f'<pre>{html.escape(tb_string)[-4085:]}</pre>'
+        f'<pre>{html.escape(tb_string).split('\n')[-1]}</pre>'
     )
     chat_id = context.bot_data.get('storage_chat_id', '382219005')
     for message in messages:
@@ -108,12 +110,14 @@ def main():
             CallbackQueryHandler(handle_delete_callback, r'delete_'),
             CallbackQueryHandler(handle_details_callback, r'details_'),
             CallbackQueryHandler(handle_episodes_callback, r'episodes_'),
+            CallbackQueryHandler(handle_exclude_callback, r'exclude_'),
             CallbackQueryHandler(handle_play_callback, r'play_'),
             CallbackQueryHandler(handle_rating_callback, r'rating_'),
             CallbackQueryHandler(handle_search_callback, r'search_'),
             CallbackQueryHandler(handle_seasons_callback, r'seasons_'),
             CallbackQueryHandler(handle_text_callback, r'text_'),
             CallbackQueryHandler(handle_history_callback, r'history_'),
+            CallbackQueryHandler(handle_update_callback, r'update_'),
             CallbackQueryHandler(handle_unknown_callback),
         ],
         states={

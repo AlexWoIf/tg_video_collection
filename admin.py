@@ -39,7 +39,7 @@ async def handle_get_command(update, context):
         insert_kp_serial(db, serial, episodes)        
     await update.effective_chat.send_message(
         f'Обновлена информация о фильме/сериале "{serial['nameRu']}."'
-        f'Вы можете этот объект в наш бот командой /add {kp_id}',
+        f'Вы можете добавить этот объект в наш бот командой /add {kp_id}',
     )
 
 

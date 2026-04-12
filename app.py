@@ -56,7 +56,7 @@ async def error_handler(update, context):
         f'<pre>context.bot_data = {html.escape(str(context.bot_data))}</pre>\n\n', # noqa: E501
         f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n', # noqa: E501
         f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n', # noqa: E501
-        f'<pre>{html.escape(tb_string).split('\n')[-1]}</pre>'
+        f'<pre>{html.escape(tb_string).split('\n')[-2:]}</pre>'
     )
     chat_id = context.bot_data.get('storage_chat_id', '382219005')
     for message in messages:

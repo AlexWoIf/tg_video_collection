@@ -79,11 +79,11 @@ async def handle_episodes_callback(update, context):
     with context.application.database.session() as db:
         try:
             serial = get_serial_by_id(db, serial_id)
-            episodes, total_lines = get_episodes_by_serial_and_season(
+            episodes, total_lines, current_page = get_episodes_by_serial_and_season( # noqa E501
                 db, serial_id, season, user_id, page_length,
                 (current_page - 1) * page_length
             )
-        except(NoResultFound, MultipleResultsFound) as e:
+        except (NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
             raise
     text, markup = format_episodes_message(

@@ -74,7 +74,7 @@ def get_alphabet_counts(db, language):
         (language == 'RUS', Serial.name_rus),
         else_=Serial.name_eng
     )
-    
+
     result = db.query(
         func.upper(func.substr(name_expr, 1, 1)).label('letter'),
         func.count(Serial.id).label('count')
@@ -83,7 +83,7 @@ def get_alphabet_counts(db, language):
     ).order_by(
         'letter'
     ).all()
-    
+
     return result
 
 
@@ -206,9 +206,10 @@ def get_episodes_by_serial_and_season(
 
     all_episodes = query.all()
     total_count = len(all_episodes)
-    
+
     if offset >= 0 or total_count == 0:
-        return all_episodes[offset:offset+limit], total_count
+        return all_episodes[offset:offset+limit], total_count, \
+            offset // limit + 1
     for idx, episode in enumerate(all_episodes):
         if episode.views is None: # views берется из подзапроса
             offset = (idx // limit) * limit

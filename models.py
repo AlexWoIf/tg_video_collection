@@ -18,7 +18,8 @@ class User(Base):
     is_bot = Column(Boolean, nullable=False, default=False)
 
     view_requests = relationship('EpisodeViewRecord', back_populates='user')
-    new_movie_requests = relationship('RequestedNewMovie', back_populates='user')
+    new_movie_requests = relationship('RequestedNewMovie',
+                                      back_populates='user')
 
     def __repr__(self):
         return f'<User(id={self.id}, username="{self.username}")>'
@@ -40,10 +41,10 @@ class Serial(Base):
     kp_id = Column(String(10), nullable=False, default='')
 
     episodes = relationship('Episode', back_populates='serial')
-    posters = relationship('Poster', back_populates='serial', 
-                         foreign_keys='Poster.serial_id')
+    posters = relationship('Poster', back_populates='serial',
+                           foreign_keys='Poster.serial_id')
     default_poster = relationship('Poster', foreign_keys=[poster_id])
-    kp_details = relationship("KPSerial", back_populates="serial", 
+    kp_details = relationship("KPSerial", back_populates="serial",
                               uselist=False)
 
     def __repr__(self):
@@ -68,7 +69,7 @@ class Episode(Base):
         Index('ix_episodes_serial_id', 'serial_id'),
     )
 
-    id = Column(BigInteger, primary_key=True, nullable=False, 
+    id = Column(BigInteger, primary_key=True, nullable=False,
                 autoincrement=True)
     serial_id = Column(BigInteger, ForeignKey('serials.id'), nullable=False)
     season = Column(Integer, nullable=False, default=0)
@@ -77,7 +78,7 @@ class Episode(Base):
     file_id = Column(Integer, ForeignKey('files.id'), nullable=True)
 
     serial = relationship('Serial', back_populates='episodes')
-    files = relationship('File', back_populates='episode', 
+    files = relationship('File', back_populates='episode',
                          foreign_keys='File.episode_id')
     default_file = relationship('File', foreign_keys=[file_id])
     view_requests = relationship('EpisodeViewRecord', back_populates='episode')
@@ -99,14 +100,14 @@ class Poster(Base):
     file_id = Column(String(255), nullable=False)
     width = Column(SmallInteger, nullable=False, default=0)
     height = Column(SmallInteger, nullable=False, default=0)
-    
+
     serial = relationship('Serial', back_populates='posters',
-                           foreign_keys=[serial_id])
-    
+                          foreign_keys=[serial_id])
+
     def __repr__(self):
         return f'<Poster(id={self.id}, episode_id={self.serial_id},' \
                f' file_id="{self.file_id}")>'
-    
+
 
 class File(Base):
     __tablename__ = 'files'
@@ -122,7 +123,7 @@ class File(Base):
     duration = Column(Integer, nullable=False, default=0)
     width = Column(SmallInteger, nullable=False, default=0)
     height = Column(SmallInteger, nullable=False, default=0)
-    audio_id = Column(Integer, ForeignKey('sounds.id'), nullable=False, 
+    audio_id = Column(Integer, ForeignKey('sounds.id'), nullable=False,
                       default=0)
 
     episode = relationship('Episode', back_populates='files',
@@ -171,7 +172,7 @@ class KPSerial(Base):
     __tablename__ = 'kp_serials'
 
     kp_id = Column(BigInteger, primary_key=True, nullable=False)
-    serial_id = Column(BigInteger, ForeignKey('serials.id'), unique=True, 
+    serial_id = Column(BigInteger, ForeignKey('serials.id'), unique=True,
                        nullable=True)
     name_rus = Column(Text, nullable=False, default='')
     name_eng = Column(Text, nullable=False, default='')
@@ -181,7 +182,7 @@ class KPSerial(Base):
 
     serial = relationship("Serial", foreign_keys=[serial_id])
     episodes = relationship("KPEpisode", back_populates="kp_serial",
-                            cascade="all, delete-orphan" )
+                            cascade="all, delete-orphan", )
 
     def __repr__(self):
         return f'<KPSerial(kp_id={self.kp_id}, name_rus="{self.name_rus}")>'
@@ -190,9 +191,9 @@ class KPSerial(Base):
 class KPEpisode(Base):
     __tablename__ = 'kp_episodes'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, 
+    id = Column(BigInteger, primary_key=True, autoincrement=True,
                 nullable=False)
-    kp_serial_id = Column(BigInteger, ForeignKey('kp_serials.kp_id'), 
+    kp_serial_id = Column(BigInteger, ForeignKey('kp_serials.kp_id'),
                           nullable=False)
     season = Column(Integer, nullable=False)
     episode = Column(Integer, nullable=False)

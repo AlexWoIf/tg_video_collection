@@ -1,12 +1,10 @@
-import logging
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from basic_handlers import handle_delete_callback
-from helpers import get_paginated_markup, format_numeric
+from helpers import format_numeric
 from kinopoiskapiunofficial import KinopoiskApi
-from queries import (get_kp_episodes_by_serial_id, get_serial_by_id, 
-                     ignore_kp_episode, insert_kp_episode, insert_kp_serial, )
+from queries import (get_kp_episodes_by_serial_id, ignore_kp_episode,
+                     insert_kp_episode, insert_kp_serial)
 
 
 async def handle_add_command(update, context):
@@ -36,7 +34,7 @@ async def handle_get_command(update, context):
         return
     episodes = await api.get_seasons_info(kp_id)
     with context.application.database.session() as db:
-        insert_kp_serial(db, serial, episodes)        
+        insert_kp_serial(db, serial, episodes)
     await update.effective_chat.send_message(
         f'Обновлена информация о фильме/сериале "{serial['nameRu']}."'
         f'Вы можете добавить этот объект в наш бот командой /add {kp_id}',
@@ -44,6 +42,16 @@ async def handle_get_command(update, context):
 
 
 async def handle_exclude_callback(update, context):
+    callback_query = update.callback_query
+    _, kp_episode, page = callback_query.data.split('_')
+    with context.application.database.session() as db:
+        serial = ignore_kp_episode(db, kp_episode)
+    context.args = [str(serial.id), page, ]
+    await handle_update_command(update, context)
+    await handle_delete_callback(update, context)
+
+
+async def handle_include_callback(update, context):
     callback_query = update.callback_query
     _, kp_episode, page = callback_query.data.split('_')
     with context.application.database.session() as db:
@@ -106,27 +114,29 @@ async def handle_update_command(update, context):
         keyboard.append([
             InlineKeyboardButton(
                 text='1⏮️',
-                callback_data=f'{list_type}_1' if current_page>1 else '-'),
+                callback_data=f'{list_type}_1' if current_page > 1 else '-'),
             InlineKeyboardButton(
                 text='◀️',
-                callback_data=f'{list_type}_{current_page - 1}' 
-                                if current_page>1 else '-'),
+                callback_data=f'{list_type}_{current_page - 1}'
+                              if current_page > 1 else '-'),
             InlineKeyboardButton(f'{current_page}', callback_data='-'),
             InlineKeyboardButton(
-                text='▶️', 
-                callback_data=f'{list_type}_{current_page+1}' 
-                                if current_page<total_pages else '-'),
+                text='▶️',
+                callback_data=f'{list_type}_{current_page+1}'
+                              if current_page < total_pages else '-'),
             InlineKeyboardButton(
                 text=f'⏭️{total_pages}',
-                callback_data=f'{list_type}_{total_pages}' 
-                                if current_page<total_pages else '-'),
+                callback_data=f'{list_type}_{total_pages}'
+                              if current_page < total_pages else '-'),
         ])
     keyboard.append([
-            InlineKeyboardButton(text='✅ Добавить все', 
+            InlineKeyboardButton(text='✅ Добавить все',
                                  callback_data='include_'),
-            InlineKeyboardButton(text='❌ Удалить меню', 
+            InlineKeyboardButton(text='❌ Удалить меню',
                                  callback_data='delete_'),
     ])
     text = f'Можем добавить {format_numeric(len(kp_episodes), 'эпизод')}\n'
-    await update.effective_chat.send_message(text, 
-        reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.effective_chat.send_message(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )

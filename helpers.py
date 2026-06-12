@@ -43,6 +43,7 @@ def get_search_text(text):
 def get_deep_link(bot_name, callback_data):
     return create_deep_linked_url(bot_name, callback_data)
 
+
 def get_button_text_for_serial(serial, max_length=40, counter=True):
     if counter:
         name_rus, name_eng, counter, serial_id = serial
@@ -54,7 +55,7 @@ def get_button_text_for_serial(serial, max_length=40, counter=True):
     if len(name_part) > (max_length - len(counter_part)):
         name_part = f'{name_part[:max_length - len(counter_part) - 3]}...'
 
-    return {'text': f'{name_part}{counter_part}', 
+    return {'text': f'{name_part}{counter_part}',
             'callback_data': f'details_{serial_id}'}
 
 
@@ -67,13 +68,13 @@ def get_button_text_for_episode(episode, max_length=40):
 
 
 def get_alphabet_markup(letters):
-    buttons = [{'text': '{}[{}]'.format(*letter), 
+    buttons = [{'text': '{}[{}]'.format(*letter),
                 'callback_data': f'text_{letter.letter}'}
                for letter in letters]
     row_length = 6
     keyboard = [
-        list(map(lambda button: InlineKeyboardButton(**button), 
-        buttons[i:i+row_length]))
+        list(map(lambda button: InlineKeyboardButton(**button),
+             buttons[i:i+row_length]))
         for i in range(0, len(buttons), row_length)
     ]
     keyboard.append([
@@ -83,7 +84,7 @@ def get_alphabet_markup(letters):
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_paginated_markup(buttons_callbacks, list_type, current_page=1, total_pages=1, ): # noqa: E501
+def get_paginated_markup(buttons_callbacks, list_type, current_page=1, total_pages=1, ):  # noqa: E501
     keyboard = [
         [InlineKeyboardButton(**button_callback)]
         for button_callback in buttons_callbacks
@@ -93,22 +94,23 @@ def get_paginated_markup(buttons_callbacks, list_type, current_page=1, total_pag
     keyboard.append([
         InlineKeyboardButton(
             text='1⏮️',
-            callback_data=f'{list_type}_1' if current_page>1 else '-'),
+            callback_data=f'{list_type}_1' if current_page > 1 else '-'),
         InlineKeyboardButton(
             text='◀️',
-            callback_data=f'{list_type}_{current_page - 1}' 
-                            if current_page>1 else '-'),
+            callback_data=f'{list_type}_{current_page - 1}'
+                          if current_page > 1 else '-'),
         InlineKeyboardButton(f'{current_page}', callback_data='-'),
         InlineKeyboardButton(
-            text='▶️', 
-            callback_data=f'{list_type}_{current_page+1}' 
-                            if current_page<total_pages else '-'),
+            text='▶️',
+            callback_data=f'{list_type}_{current_page+1}'
+                          if current_page < total_pages else '-'),
         InlineKeyboardButton(
             text=f'⏭️{total_pages}',
-            callback_data=f'{list_type}_{total_pages}' 
-                            if current_page<total_pages else '-'),
+            callback_data=f'{list_type}_{total_pages}'
+                          if current_page < total_pages else '-'),
     ])
     return InlineKeyboardMarkup(keyboard)
+
 
 def get_serial_detail_markup(serial):
     keyboard = [
@@ -130,7 +132,7 @@ def get_seasons_markup(serial_id, seasons):
             [InlineKeyboardButton(
                 text=f'Сезон {season}[{episodes}]',
                 callback_data=f'episodes_{serial_id}_{season}_0')
-            for season, episodes in seasons[i:i+2]]
+                for season, episodes in seasons[i:i+2]]
         )
     keyboard.append([
         InlineKeyboardButton(
@@ -146,10 +148,12 @@ def get_seasons_markup(serial_id, seasons):
 def add_episodes_markup_footer(reply_markup, serial_id):
     keyboard = reply_markup.inline_keyboard
     keyboard += (
-        [InlineKeyboardButton(LISTSEASONS, callback_data = f"seasons_{serial_id}"),
-         InlineKeyboardButton(SERIALDETAILS, callback_data = f"details_{serial_id}") ],
-        [InlineKeyboardButton(COMPLAIN, url = SUPPORT_LINK),
-         InlineKeyboardButton(DELETE, callback_data = "delete_"),]
+        [InlineKeyboardButton(LISTSEASONS,
+                              callback_data=f"seasons_{serial_id}"),
+         InlineKeyboardButton(SERIALDETAILS,
+                              callback_data=f"details_{serial_id}"), ],
+        [InlineKeyboardButton(COMPLAIN, url=SUPPORT_LINK),
+         InlineKeyboardButton(DELETE, callback_data="delete_"), ]
     )
     return InlineKeyboardMarkup(keyboard)
 
@@ -166,7 +170,7 @@ def get_default_episode_markup(episode, episodes, next_episode):
     keyboard += [
             [InlineKeyboardButton(
                 f'[{row.width}x{row.height}] {row.audio}',
-                callback_data = f'play_{row.id}_{row.file_id}',
+                callback_data=f'play_{row.id}_{row.file_id}',
             )]
             for row in episodes
         ]
@@ -179,15 +183,15 @@ def get_default_episode_markup(episode, episodes, next_episode):
         ],
         [
             InlineKeyboardButton(
-                LISTSEASONS, callback_data = f'seasons_{episode.serial_id}'
+                LISTSEASONS, callback_data=f'seasons_{episode.serial_id}'
             ),
             InlineKeyboardButton(
-                SERIALDETAILS, callback_data = f'details_{episode.serial_id}'
+                SERIALDETAILS, callback_data=f'details_{episode.serial_id}'
             ),
         ],
         [
-            InlineKeyboardButton(COMPLAIN, url = SUPPORT_LINK),
-            InlineKeyboardButton(DELETE, callback_data = "delete_"),
+            InlineKeyboardButton(COMPLAIN, url=SUPPORT_LINK),
+            InlineKeyboardButton(DELETE, callback_data="delete_"),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)

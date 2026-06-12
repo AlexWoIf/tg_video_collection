@@ -35,6 +35,7 @@ async def handle_alphabet_command(update, context):
     text, markup = format_alphabet_message(letters)
     await update.effective_chat.send_message(text=text, reply_markup=markup, )
 
+
 async def handle_delete_callback(update, context):
     try:
         await update.callback_query.delete_message()
@@ -62,7 +63,7 @@ async def handle_details_command(update, context):
         try:
             serial = get_serial_by_id(db, serial_id)
         except (NoResultFound, MultipleResultsFound) as e:
-            await callback_query.answer(
+            await update.effective_chat.send_message(
                 f'Ошибка {e} при загрузке сериала {serial_id}')
             raise
     text, markup = format_details_message(serial)
@@ -122,7 +123,8 @@ async def handle_history_command(update, context):
         text = 'История просмотров пуста'
         await update.effective_chat.send_message(text=text)
         return
-    text, markup = format_history_message(history, num_lines, page, page_length)
+    text, markup = format_history_message(history, num_lines, page,
+                                          page_length, )
     await update.effective_chat.send_message(text=text, reply_markup=markup, )
 
 
@@ -133,20 +135,16 @@ async def handle_play_callback(update, context):
         try:
             files = get_episode_by_id(db, episode_id)
             next_episode = get_next_episode(db, files[0])
-        except(NoResultFound, MultipleResultsFound) as e:
+        except (NoResultFound, MultipleResultsFound) as e:
             await callback_query.answer(
-                f'Ошибка {e} при загрузке сериала {episode_id}') 
+                f'Ошибка {e} при загрузке сериала {episode_id}')
             raise
         insert_episode_view_record(db, update.effective_sender.id, episode_id)
     text, markup, current_file = format_play_message(
         context.bot.username, files, int(file_id), next_episode, )
     kwargs = {'parse_mode': 'HTML', 'caption': text, 'reply_markup': markup, }
-    if context.application.parameters.get('debug', False):
-        await update.effective_chat.send_photo(photo=serial.poster_file_id, 
-                                               **kwargs)
-    else:
-        await update.effective_chat.send_video(
-            video=current_file.tg_file_id, **kwargs)
+    await update.effective_chat.send_video(
+        video=current_file.tg_file_id, **kwargs)
     await handle_delete_callback(update, context)
 
 
@@ -167,7 +165,7 @@ async def handle_rating_command(update, context):
     await update.effective_chat.send_message(
         parse_mode='HTML',
         text=text,
-        reply_markup = markup,
+        reply_markup=markup,
     )
 
 
@@ -215,7 +213,7 @@ async def handle_search_command(update, context):
     await update.effective_chat.send_message(
         parse_mode='HTML',
         text=text,
-        reply_markup = markup,
+        reply_markup=markup,
     )
 
 
@@ -233,8 +231,9 @@ async def handle_seasons_callback(update, context):
         try:
             serial = get_serial_by_id(db, serial_id)
             seasons = get_seasons_by_serial_id(db, serial_id)
-        except(NoResultFound, MultipleResultsFound) as e:
-            await callback_query.answer(f'Ошибка {e} при загрузке сериала {serial_id}') # noqa E501
+        except (NoResultFound, MultipleResultsFound) as e:
+            await callback_query.answer(
+                f'Ошибка {e} при загрузке сериала {serial_id}')
             raise
     text, markup = format_seasons_message(serial, seasons)
     await update.effective_chat.send_photo(
@@ -276,7 +275,7 @@ async def handle_unknown_callback(update, context):
 
 
 async def handle_urls(update, context):
-    search = re.search(r'(imdb\.com|kinopoisk\.ru)/[^/]+/([^/]+)', update.message.text)
+    search = re.search(r'(imdb\.com|kinopoisk\.ru)/[^/]+/([^/]+)', update.message.text)  # noqa E501
     if not search:
         await update.effective_chat.send_message(
             'Ваша ссылка нераспознана. '
@@ -293,9 +292,9 @@ async def handle_urls(update, context):
         except NoResultFound:
             user_id = update.effective_sender.id
             create_new_movie_request(db, user_id, update.message.text,
-                                    **{search_key: search_value})
-            web_url = re.sub(r'(imdb\.com|kinopoisk\.ru)', 'kinospisok.ru', 
-                                update.message.text)
+                                     **{search_key: search_value})
+            web_url = re.sub(r'(imdb\.com|kinopoisk\.ru)', 'kinospisok.ru',
+                             update.message.text)
             await update.effective_chat.send_message(
                 'В нашем каталоге такого контента пока нет.\n'
                 'Пока мы работаем над его добавлением, попробуйте посмотреть '

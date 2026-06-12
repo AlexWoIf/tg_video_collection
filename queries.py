@@ -5,12 +5,24 @@ from sqlalchemy import and_, case, distinct, func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from models import *
+from models import (
+    Serial,
+    Episode,
+    File,
+    Audio,
+    Poster,
+    User,
+    KPSerial,
+    KPEpisode,
+    EpisodeViewRecord,
+    RequestedNewMovie,
+)
 
 
-def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offset: int = 0):
+def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10,
+                                offset: int = 0):
     """
-    Получает агрегированную историю просмотров по сериалам с группировкой по 
+    Получает агрегированную историю просмотров по сериалам с группировкой по
     последовательным просмотрам с поддержкой пагинации.
     Если limit=0, то возвращает общее количество групп просмотров.
     """
@@ -32,8 +44,9 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
      .filter(EpisodeViewRecord.user_id == user_id) \
      .subquery()
 
-    # Теперь в основном запросе вычисляем группу на основе сравнения с предыдущим serial_id
-    # и применяем агрегатную функцию SUM уже к простому полю CASE
+    # Теперь в основном запросе вычисляем группу на основе сравнения с
+    # предыдущим serial_id и применяем агрегатную функцию SUM уже к простому
+    # полю CASE
     cte_query = db.query(
         subquery.c.user_id,
         subquery.c.episode_id,
@@ -42,7 +55,7 @@ def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10, offs
         subquery.c.name_rus,
         subquery.c.name_eng,
         subquery.c.prev_serial_id,
-        # Вычисляем группу с помощью SUM и CASE, но уже без оконных функций внутри
+        # Вычисляем группу с помощью SUM и CASE, но уже без оконных функций
         func.sum(
             case(
                 (subquery.c.serial_id != subquery.c.prev_serial_id, 1),
@@ -161,7 +174,8 @@ def get_kp_episodes_by_serial_id(db: Session, serial_id: int, ):
         KPEpisode.episode,
         KPEpisode.name_rus,
         KPEpisode.name_eng
-    ).join(Serial, Serial.kp_id == KPEpisode.kp_serial_id
+    ).join(
+        Serial, Serial.kp_id == KPEpisode.kp_serial_id
     ).outerjoin(
         Episode,
         (Episode.serial_id == Serial.id) &
@@ -187,7 +201,7 @@ def get_episodes_by_serial_and_season(
     subquery = db.query(
         EpisodeViewRecord.episode_id,
         func.count(EpisodeViewRecord.created_at).label('views')
-    ).filter(EpisodeViewRecord.user_id==user_id) \
+    ).filter(EpisodeViewRecord.user_id == user_id) \
      .group_by(EpisodeViewRecord.episode_id) \
      .subquery()
 
@@ -198,8 +212,8 @@ def get_episodes_by_serial_and_season(
         Episode.id,
         Episode.file_id,
         subquery.c.views
-    ).join(subquery, subquery.c.episode_id==Episode.id, isouter=True, ) \
-     .filter(Episode.serial_id==serial_id, Episode.season==season, 
+    ).join(subquery, subquery.c.episode_id == Episode.id, isouter=True, ) \
+     .filter(Episode.serial_id == serial_id, Episode.season == season,
              Episode.file_id.is_not(None)) \
      .group_by(Episode.id, Episode.episode, ) \
      .order_by(Episode.episode)
@@ -211,7 +225,7 @@ def get_episodes_by_serial_and_season(
         return all_episodes[offset:offset+limit], total_count, \
             offset // limit + 1
     for idx, episode in enumerate(all_episodes):
-        if episode.views is None: # views берется из подзапроса
+        if episode.views is None:  # views берется из подзапроса
             offset = (idx // limit) * limit
             break
     else:
@@ -221,26 +235,26 @@ def get_episodes_by_serial_and_season(
 
 def get_episode_by_id(db: Session, episode_id: int, ):
     return db.query(
-    Episode.id,
-    Episode.serial_id,
-    Serial.name_rus,
-    Serial.name_eng,
-    Episode.season,
-    Episode.episode,
-    Episode.name,
-    File.id.label('file_id'),
-    File.file_id.label('tg_file_id'),
-    File.width,
-    File.height,
-    Audio.name.label('audio'),
-    Poster.file_id.label('poster_file_id'),
-).join(
-    Episode, Episode.serial_id==Serial.id, isouter=True,
-).join(
-    File, File.episode_id==Episode.id, isouter=True,
-).join(
-    Audio, Audio.id==File.audio_id, isouter=True,
-).filter(Episode.id==episode_id, Serial.poster_id==Poster.id).all()
+        Episode.id,
+        Episode.serial_id,
+        Serial.name_rus,
+        Serial.name_eng,
+        Episode.season,
+        Episode.episode,
+        Episode.name,
+        File.id.label('file_id'),
+        File.file_id.label('tg_file_id'),
+        File.width,
+        File.height,
+        Audio.name.label('audio'),
+        Poster.file_id.label('poster_file_id'),
+    ).join(
+        Episode, Episode.serial_id == Serial.id, isouter=True,
+    ).join(
+        File, File.episode_id == Episode.id, isouter=True,
+    ).join(
+        Audio, Audio.id == File.audio_id, isouter=True,
+    ).filter(Episode.id == episode_id, Serial.poster_id == Poster.id).all()
 
 
 def get_next_episode(db: Session, current_episode):
@@ -344,7 +358,7 @@ def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
     )
 
 
-def insert_new_episode(db: Session, serial_id: int, season: int , 
+def insert_new_episode(db: Session, serial_id: int, season: int,
                        episode: int, name: str):
     db.add(
         Episode(
@@ -369,7 +383,7 @@ def insert_new_user(db: Session, user):
     )
 
 
-def create_new_movie_request(db: Session, user_id: int, url: str, 
+def create_new_movie_request(db: Session, user_id: int, url: str,
                              kp_id: str = '', imdb: str = ''):
     try:
         movie_request = RequestedNewMovie(
@@ -379,13 +393,13 @@ def create_new_movie_request(db: Session, user_id: int, url: str,
             imdb=imdb,
             created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         )
-        
+
         db.add(movie_request)
         db.commit()
         db.refresh(movie_request)
-        
+
         return movie_request
-        
+
     except SQLAlchemyError as e:
         db.rollback()
         logging.error(f"Ошибка при сохранении запроса: {e}")

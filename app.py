@@ -114,7 +114,7 @@ def main():
             CallbackQueryHandler(handle_details_callback, r'details_'),
             CallbackQueryHandler(handle_episodes_callback, r'episodes_'),
             CallbackQueryHandler(handle_exclude_callback, r'exclude_'),
-            CallbackQueryHandler(handle_include_callback, r'exclude_'),
+            CallbackQueryHandler(handle_include_callback, r'include_'),
             CallbackQueryHandler(handle_play_callback, r'play_'),
             CallbackQueryHandler(handle_rating_callback, r'rating_'),
             CallbackQueryHandler(handle_search_callback, r'search_'),

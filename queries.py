@@ -5,18 +5,8 @@ from sqlalchemy import and_, case, distinct, func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from models import (
-    Serial,
-    Episode,
-    File,
-    Audio,
-    Poster,
-    User,
-    KPSerial,
-    KPEpisode,
-    EpisodeViewRecord,
-    RequestedNewMovie,
-)
+from models import (Audio, Episode, EpisodeViewRecord, File, KPEpisode,
+                    KPSerial, Poster, RequestedNewMovie, Serial, User)
 
 
 def get_aggregated_view_history(db: Session, user_id: int, limit: int = 10,
@@ -308,16 +298,89 @@ def ignore_kp_episode(db: Session, kp_episode_id: int):
     ).one_or_none()
 
 
-def insert_kp_episode(db: Session, episode, serial_id):
-    return db.merge(
-        KPEpisode(
-            kp_id=serial_id,
-            season=episode['seasonNumber'],
-            episode=episode['episodeNumber'],
-            name_rus=episode['nameRu'],
-            name_eng=episode['nameEn'],
+def add_all_episodes_from_kp_serial(db, serial_id: int) -> list[Episode]:
+    kp_episodes = db.query(KPEpisode).join(
+        KPSerial, KPSerial.kp_id == KPEpisode.kp_serial_id
+    ).join(
+        Serial, Serial.kp_id == KPSerial.kp_id
+    ).outerjoin(
+        Episode,
+        (Episode.serial_id == Serial.id) &
+        (Episode.season == KPEpisode.season) &
+        (Episode.episode == KPEpisode.episode)
+    ).filter(
+        Serial.id == serial_id,
+        ~KPEpisode.ignore,
+        Episode.id.is_(None),  # Нет существующего эпизода
+    ).all()
+
+    created_episodes = []
+    for kp_episode in kp_episodes:
+        episode = add_episode_from_kp_episode(db, kp_episode.id)
+        created_episodes.append(episode)
+
+    return created_episodes
+
+
+def add_episode_from_kp_episode(db: Session, kp_episode_id: int) -> Episode:
+    """
+    Добавляет эпизод в таблицу Episode на основе данных из KPEpisode
+
+    Args:
+        session: сессия SQLAlchemy
+        kp_episode_id: ID эпизода из таблицы kp_episodes
+
+    Returns:
+        Episode: созданный объект Episode
+
+    Raises:
+        ValueError: если KPEpisode с указанным ID не найден
+        ValueError: если Serial с таким kp_id не найден
+        ValueError: если уже есть эпизод с таким serial_id, season и episode
+    """
+    # Получаем KPEpisode из базы
+    kp_episode = db.query(KPEpisode).filter(KPEpisode.id == kp_episode_id) \
+        .first()
+
+    if not kp_episode:
+        raise ValueError(f'KPEpisode с id={kp_episode_id} не найден')
+
+    kp_id = kp_episode.kp_serial.kp_id
+
+    serial = db.query(Serial).filter(Serial.kp_id == str(kp_id)).first()
+    if not serial:
+        raise ValueError(
+            f"Serial с kp_id={kp_id} не найден в таблице serials. "
+            f"Сначала необходимо добавить сериал."
         )
+
+    existing_episode = db.query(Episode).filter(
+        Episode.serial_id == serial.id,
+        Episode.season == kp_episode.season,
+        Episode.episode == kp_episode.episode
+    ).first()
+    if existing_episode:
+        raise ValueError(
+            f'Эпизод с serial_id={serial.id}, season={kp_episode.season}, '
+            f'episode={kp_episode.episode} уже существует'
+        )
+
+    # Формируем название эпизода (приоритет у русского названия)
+    episode_name = f'{kp_episode.name_rus} ({kp_episode.name_eng})' \
+        if kp_episode.name_rus else kp_episode.name_eng
+
+    # Создаем новый эпизод
+    new_episode = Episode(
+        serial_id=serial.id,
+        season=kp_episode.season,
+        episode=kp_episode.episode,
+        name=episode_name,
     )
+
+    db.add(new_episode)
+    db.flush()  # Чтобы получить id нового эпизода
+
+    return new_episode
 
 
 def insert_kp_serial(db: Session, serial, episodes):
@@ -353,7 +416,7 @@ def insert_episode_view_record(db: Session, user_id: int, episode_id: int):
         EpisodeViewRecord(
             user_id=user_id,
             episode_id=episode_id,
-            created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         )
     )
 
@@ -391,7 +454,7 @@ def create_new_movie_request(db: Session, user_id: int, url: str,
             url=url,
             kp_id=kp_id,
             imdb=imdb,
-            created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         )
 
         db.add(movie_request)
@@ -402,5 +465,5 @@ def create_new_movie_request(db: Session, user_id: int, url: str,
 
     except SQLAlchemyError as e:
         db.rollback()
-        logging.error(f"Ошибка при сохранении запроса: {e}")
+        logging.error(f'Ошибка при сохранении запроса: {e}')
         return None

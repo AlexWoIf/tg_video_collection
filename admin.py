@@ -3,8 +3,9 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from basic_handlers import handle_delete_callback
 from helpers import format_numeric
 from kinopoiskapiunofficial import KinopoiskApi
-from queries import (get_kp_episodes_by_serial_id, ignore_kp_episode,
-                     insert_kp_episode, insert_kp_serial)
+from queries import (add_all_episodes_from_kp_serial,
+                     add_episode_from_kp_episode, get_kp_episodes_by_serial_id,
+                     ignore_kp_episode, insert_kp_serial)
 
 
 async def handle_add_command(update, context):
@@ -53,11 +54,16 @@ async def handle_exclude_callback(update, context):
 
 async def handle_include_callback(update, context):
     callback_query = update.callback_query
-    _, kp_episode, page = callback_query.data.split('_')
+    _, kp_episode, arg = callback_query.data.split('_')
     with context.application.database.session() as db:
-        serial = ignore_kp_episode(db, kp_episode)
-    context.args = [str(serial.id), page, ]
-    await handle_update_command(update, context)
+        if kp_episode == 'all':
+            add_all_episodes_from_kp_serial(db, arg)
+            await update.effective_chat.send_message(
+                f'Все эпизоды сериала с ID {arg} добавлены в базу данных')
+        else:
+            serial = add_episode_from_kp_episode(db, kp_episode)
+            context.args = [str(serial.id), arg, ]
+            await handle_update_command(update, context)
     await handle_delete_callback(update, context)
 
 
@@ -78,7 +84,7 @@ async def handle_update_command(update, context):
     if update.effective_chat.id != context.application.parameters.get(
                                                             'storage_chat_id'):
         return
-    args = context.args + ['0']
+    args = context.args + ['0'] + ['1']
     serial_id = args and args[0].isdigit() and int(args[0]) or 0
     current_page = args and args[1].isdigit() and int(args[1]) or 1
     page_length = context.application.parameters.get('page_length')
@@ -131,7 +137,7 @@ async def handle_update_command(update, context):
         ])
     keyboard.append([
             InlineKeyboardButton(text='✅ Добавить все',
-                                 callback_data='include_'),
+                                 callback_data=f'include_all_{serial_id}'),
             InlineKeyboardButton(text='❌ Удалить меню',
                                  callback_data='delete_'),
     ])

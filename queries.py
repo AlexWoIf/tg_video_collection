@@ -408,7 +408,14 @@ def insert_kp_serial(db: Session, serial, episodes):
                 )
             )
 
+    existing_serial = db.query(Serial) \
+                        .filter(Serial.kp_id == str(serial_id)).first()
+    if existing_serial:
+        new_kp_serial.serial_id = existing_serial.id
+
     db.add(new_kp_serial)
+
+    return new_kp_serial
 
 
 def insert_episode_view_record(db: Session, user_id: int, episode_id: int):

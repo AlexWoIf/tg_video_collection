@@ -1,4 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 
 from basic_handlers import handle_delete_callback
 from helpers import format_numeric
@@ -35,11 +36,23 @@ async def handle_get_command(update, context):
         return
     episodes = await api.get_seasons_info(kp_id)
     with context.application.database.session() as db:
-        insert_kp_serial(db, serial, episodes)
-    await update.effective_chat.send_message(
-        f'Обновлена информация о фильме/сериале "{serial['nameRu']}."'
-        f'Вы можете добавить этот объект в наш бот командой /add {kp_id}',
-    )
+        new_kp_serial = insert_kp_serial(db, serial, episodes)
+        name = f'{new_kp_serial.name_rus} ({new_kp_serial.name_eng})' \
+               if {new_kp_serial.name_eng} else new_kp_serial.name_rus
+        if new_kp_serial.serial_id:
+            msg = (
+                f'Обновлена информация о существующем сериале "{name}".\n'
+                'Вы можете обновить информацию о новых эпизодах командой '
+                f'<code>/update {new_kp_serial.serial_id}</code>'
+            )
+        else:
+            msg = (
+                f'Обновлена информация о фильме/сериале "{name}".\n'
+                'Вы можете добавить этот объект в наш бот командой '
+                f'<code>/add {kp_id}</code>'
+            )
+
+    await update.effective_chat.send_message(msg, parse_mode=ParseMode.HTML)
 
 
 async def handle_exclude_callback(update, context):

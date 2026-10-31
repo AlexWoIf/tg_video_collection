@@ -27,6 +27,9 @@ class Config():
             'kp_api_key': os.getenv('KINOPOISK_API_KEY', ''),
         }
 
+        self.sentry_dsn = os.getenv('SENTRY_DSN', '')
+        self.environment = os.getenv('ENVIRONMENT', 'production')
+
         # TODO: use pydantic instead
         if not db_name or not db_user or not db_password or not tg_bot_token:
             raise ValueError('Some params does not set')

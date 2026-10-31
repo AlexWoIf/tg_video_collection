@@ -1,8 +1,7 @@
-import html
-import json
 import logging
-import traceback
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
@@ -43,26 +42,36 @@ async def error_handler(update, context):
     logger.error(msg="Error during message processing.",
                  exc_info=context.error)
 
-    tb_list = traceback.format_exception(
-        None, context.error, context.error.__traceback__)
-    tb_string = ''.join(tb_list)
+    if not sentry_sdk.Hub.current.client:
+        logger.error("Не задан ключ для Sentry/GlitchTip)!")
+    else:
+        with sentry_sdk.isolation_scope() as scope:
+            if isinstance(update, Update):
+                if update.effective_user:
+                    sentry_sdk.set_user({
+                        "id": str(update.effective_user.id),
+                        "username": update.effective_user.username,
+                        "name": update.effective_user.full_name
+                    })
 
-    update_str = update.to_dict() if isinstance(update, Update) \
-        else str(update)
-    messages = (
-        f'Возникло исключение при обработке сообщения.\n'
-        f'<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))[:4085]}</pre>',  # noqa: E501
-        f'<pre>context.bot_data = {html.escape(str(context.bot_data))}</pre>\n\n',  # noqa: E501
-        f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n',  # noqa: E501
-        f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n',  # noqa: E501
-        f'<pre>{html.escape(tb_string).split('\n')[-2:]}</pre>'
-    )
+                if update.effective_chat:
+                    scope.set_tag("chat_id", str(update.effective_chat.id))
+                    scope.set_tag("chat_type", update.effective_chat.type)
+
+                if update.message and update.message.text:
+                    scope.set_extra("user_message", update.message.text)
+                elif update.callback_query and update.callback_query.data:
+                    scope.set_extra("callback_data",
+                                    update.callback_query.data)
+
+            sentry_sdk.capture_exception(context.error)
+
+    message = ('Возникло исключение при обработке сообщения.\n')
     chat_id = context.bot_data.get('storage_chat_id', '382219005')
-    for message in messages:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=message,
-            parse_mode=ParseMode.HTML)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=message,
+        parse_mode=ParseMode.HTML)
 
 
 async def log_update(update: Update, _):
@@ -79,6 +88,20 @@ async def log_update(update: Update, _):
 def main():
     """Run the bot."""
     app_config = Config()
+
+    if app_config.sentry_dsn:
+        sentry_logging = LoggingIntegration(
+            level=logging.INFO,
+            event_level=logging.ERROR,
+        )
+        sentry_sdk.init(
+            dsn=app_config.sentry_dsn,
+            environment=app_config.environment,
+            enable_logs=True,
+            auto_session_tracking=False,
+            integrations=[sentry_logging],
+        )
+
     logging.getLogger().setLevel(
         logging.DEBUG if app_config.parameters['debug'] else logging.INFO
     )

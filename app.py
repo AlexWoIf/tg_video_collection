@@ -42,13 +42,14 @@ async def error_handler(update, context):
     logger.error(msg="Error during message processing.",
                  exc_info=context.error)
 
-    if not sentry_sdk.Hub.current.client:
+    client = sentry_sdk.get_client()
+    if not client or not client.dsn:
         logger.error("Не задан ключ для Sentry/GlitchTip)!")
     else:
         with sentry_sdk.isolation_scope() as scope:
             if isinstance(update, Update):
                 if update.effective_user:
-                    sentry_sdk.set_user({
+                    scope.set_user({
                         "id": str(update.effective_user.id),
                         "username": update.effective_user.username,
                         "name": update.effective_user.full_name
@@ -59,10 +60,17 @@ async def error_handler(update, context):
                     scope.set_tag("chat_type", update.effective_chat.type)
 
                 if update.message and update.message.text:
-                    scope.set_extra("user_message", update.message.text)
+                    scope.set_context("Telegram Message", {
+                        "text": update.message.text,
+                        "message_id": update.message.message_id
+                    })
                 elif update.callback_query and update.callback_query.data:
-                    scope.set_extra("callback_data",
-                                    update.callback_query.data)
+                    scope.set_context("Telegram Callback", {
+                        "data": update.callback_query.data,
+                        "origin_message_id": 
+                            update.callback_query.message.message_id 
+                            if update.callback_query.message else None
+                    })
 
             sentry_sdk.capture_exception(context.error)
 

@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from telegram import error as tg_error
@@ -24,7 +25,7 @@ async def handle_alphabet_callback(update, context):
     _, language = callback_query.data.split('_')
     context.args = [language,]
     await handle_alphabet_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_alphabet_command(update, context):
@@ -37,13 +38,23 @@ async def handle_alphabet_command(update, context):
 
 
 async def handle_delete_callback(update, context):
-    try:
-        await update.callback_query.delete_message()
-        await update.callback_query.answer()
-    except tg_error.BadRequest:
-        logging.error('Delete: BadRequest')
-        await update.callback_query.answer(
-            'Старые сообщения не могут быть удалены ботом')
+    await postprocess_callback(update, context, alert=True)
+
+
+async def postprocess_callback(update, context, alert=False):
+    query = update.callback_query
+    message_expires = query.message.date + timedelta(hours=48)
+    answer = ''
+    if message_expires < datetime.now(timezone.utc):
+        answer = ('Сообщение слишком старое, удалите самостоятельно'
+                  if alert else 'Проверьте новое сообщение в конце чата')
+    else:
+        try:
+            await query.delete_message()
+        except tg_error.BadRequest:
+            logging.error('Delete: BadRequest')
+            answer = 'Сообщение отсутствует'
+    await query.answer(answer, show_alert=alert)
 
 
 async def handle_details_callback(update, context):
@@ -51,7 +62,7 @@ async def handle_details_callback(update, context):
     _, serial_id = callback_query.data.split('_')
     context.args = [serial_id,]
     await handle_details_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_details_command(update, context):
@@ -95,7 +106,7 @@ async def handle_episodes_callback(update, context):
         caption=text,
         reply_markup=markup,
     )
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_help_command(update, context):
@@ -108,7 +119,7 @@ async def handle_history_callback(update, context):
     _, page = callback_query.data.split('_')
     context.args = [int(page),]
     await handle_history_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_history_command(update, context):
@@ -145,7 +156,7 @@ async def handle_play_callback(update, context):
     kwargs = {'parse_mode': 'HTML', 'caption': text, 'reply_markup': markup, }
     await update.effective_chat.send_video(
         video=current_file.tg_file_id, **kwargs)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_rating_callback(update, context):
@@ -153,7 +164,7 @@ async def handle_rating_callback(update, context):
     _, page = callback_query.data.split('_')
     context.args = [int(page),]
     await handle_rating_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_rating_command(update, context):
@@ -184,7 +195,7 @@ async def handle_search_callback(update, context):
         return
     context.args = [search_text, page]
     await handle_search_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
     return
 
 
@@ -242,7 +253,7 @@ async def handle_seasons_callback(update, context):
         caption=text,
         reply_markup=markup,
     )
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_serial_command(update, context):
@@ -267,7 +278,7 @@ async def handle_text_callback(update, context):
     page = 1
     context.args = [search_text, page]
     await handle_search_command(update, context)
-    await handle_delete_callback(update, context)
+    await postprocess_callback(update, context)
 
 
 async def handle_unknown_callback(update, context):
